@@ -24,8 +24,6 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -53,6 +51,12 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
+
+  .navbar-nav .nav-item .nav-link:hover {
+    color: black; /* Change to your desired text color on hover */
+    background-color: #f0f0f0; /* Change to your desired background color on hover */
+    /* Add any other styling you want for the hover effect */
+  }
 
 @media (prefers-color-scheme: light) {
   :root {
