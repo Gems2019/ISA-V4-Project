@@ -10,5 +10,3 @@ python-multipart
 accelerate
 peft
 hf_xet
-
-# sampling rate must be 16k
