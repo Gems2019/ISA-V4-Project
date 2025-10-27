@@ -62,11 +62,8 @@ def fastapi_app():
             ModelCache.processor = WhisperProcessor.from_pretrained(model_name)
             ModelCache.model = WhisperForConditionalGeneration.from_pretrained(
                 model_name,
-                torch_dtype=dtype
+                dtype=dtype
             ).to(device)
-            
-            # Force English transcription
-            ModelCache.model.config.forced_decoder_ids = ModelCache.processor.get_decoder_prompt_ids(language="en", task="transcribe")
             
             print("Model loaded successfully!")
         
@@ -89,7 +86,8 @@ def fastapi_app():
         inputs = asr_processor(
             audio_data,
             sampling_rate=sample_rate,
-            return_tensors="pt"
+            return_tensors="pt",
+            return_attention_mask=True
         )
         
         # Convert inputs to the same dtype as the model and move to device
@@ -97,8 +95,14 @@ def fastapi_app():
         if dtype == torch.float16:
             inputs.input_features = inputs.input_features.half()
         
+        # Generate with explicit language and task parameters
         with torch.no_grad():
-            predicted_ids = asr_model.generate(inputs.input_features)
+            predicted_ids = asr_model.generate(
+                inputs.input_features,
+                attention_mask=inputs.attention_mask,
+                language="en",
+                task="transcribe"
+            )
         
         transcription = asr_processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
         

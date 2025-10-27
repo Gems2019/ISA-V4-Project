@@ -34,9 +34,6 @@ def load_model():
             dtype=dtype
         ).to(device)
         
-        # Force English transcription for better accuracy (remove if you need multilingual)
-        model.config.forced_decoder_ids = processor.get_decoder_prompt_ids(language="en", task="transcribe")
-        
         print("Model loaded successfully!")
     
     return model, processor
@@ -69,7 +66,8 @@ async def transcribe_audio(file: UploadFile = File(...)):
     inputs = asr_processor(
         audio_data,
         sampling_rate=sample_rate,
-        return_tensors="pt"
+        return_tensors="pt",
+        return_attention_mask=True
     )
     
     # Convert inputs to the same dtype as the model and move to device
@@ -77,9 +75,14 @@ async def transcribe_audio(file: UploadFile = File(...)):
     if dtype == torch.float16:
         inputs.input_features = inputs.input_features.half()
     
-    # Generate transcription
+    # Generate transcription with explicit language and task parameters
     with torch.no_grad():
-        predicted_ids = asr_model.generate(inputs.input_features)
+        predicted_ids = asr_model.generate(
+            inputs.input_features,
+            attention_mask=inputs.attention_mask,
+            language="en",
+            task="transcribe"
+        )
     
     # Decode to get the verbatim transcription
     transcription = asr_processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
