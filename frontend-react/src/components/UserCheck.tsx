@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthTokenRole';
 
 interface UserCheckProps {
-  allowedRoles?: ('user' | 'admin')[];
+  allowedRoles?: ('student' | 'teacher' | 'admin')[];
 }
 
 export const UserCheck = ({ allowedRoles }: UserCheckProps) => {
