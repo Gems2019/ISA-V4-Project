@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import styled from 'styled-components';
+import messages from '../config/messages.json';
 
 // Styled Components
 const Container = styled.div`
@@ -150,24 +151,24 @@ const RegisterPage = () => {
 
     // Validate passwords match
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(messages.register.errorPasswordMismatch);
       return;
     }
 
     // Validate password length
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+      setError(messages.register.errorPasswordLength);
       return;
     }
 
     try {
       await apiClient.post('/register', { email, password });
-      setSuccess('Registration successful! Redirecting to login...');
+      setSuccess(messages.register.successRegistration);
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      setError('Failed to register. Email may already be in use.');
+      setError(messages.register.errorRegistrationFailed);
     }
   };
 
@@ -175,8 +176,8 @@ const RegisterPage = () => {
     <Container>
       <FormCard>
         <Header>
-          <Title>Create Account</Title>
-          <Subtitle>Sign up to get started!</Subtitle>
+          <Title>{messages.register.title}</Title>
+          <Subtitle>{messages.register.subtitle}</Subtitle>
         </Header>
         <FormContent onSubmit={handleSubmit}>
           <InputGroup>
@@ -184,7 +185,7 @@ const RegisterPage = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
+              placeholder={messages.register.emailPlaceholder}
               required
             />
           </InputGroup>
@@ -193,7 +194,7 @@ const RegisterPage = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder={messages.register.passwordPlaceholder}
               required
             />
           </InputGroup>
@@ -202,15 +203,15 @@ const RegisterPage = () => {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm Password"
+              placeholder={messages.register.confirmPasswordPlaceholder}
               required
             />
           </InputGroup>
           {error && <ErrorMessage>{error}</ErrorMessage>}
           {success && <SuccessMessage>{success}</SuccessMessage>}
-          <SubmitButton type="submit">Create Account</SubmitButton>
+          <SubmitButton type="submit">{messages.register.submitButton}</SubmitButton>
           <Footer>
-            Already have an account? <LoginLink onClick={() => navigate('/login')}>Signin</LoginLink>
+            {messages.register.hasAccountText} <LoginLink onClick={() => navigate('/login')}>{messages.register.signinLink}</LoginLink>
           </Footer>
         </FormContent>
       </FormCard>

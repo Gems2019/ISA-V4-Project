@@ -1,0 +1,51 @@
+{
+  "login": {
+    "title": "Welcome Back",
+    "subtitle": "Please sign-in to continue!",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "forgotPassword": "Forget your password?",
+    "submitButton": "Signin",
+    "noAccountText": "Don't have an account?",
+    "signupLink": "Signup",
+    "errorInvalidCredentials": "Invalid email or password."
+  },
+  "register": {
+    "title": "Create Account",
+    "subtitle": "Sign up to get started!",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "confirmPasswordPlaceholder": "Confirm Password",
+    "submitButton": "Create Account",
+    "hasAccountText": "Already have an account?",
+    "signinLink": "Signin",
+    "errorPasswordMismatch": "Passwords do not match.",
+    "errorPasswordLength": "Password must be at least 6 characters long.",
+    "errorRegistrationFailed": "Failed to register. Email may already be in use.",
+    "successRegistration": "Registration successful! Redirecting to login..."
+  },
+  "student": {
+    "welcomeTitle": "Welcome, Student!",
+    "apiUsageLabel": "API Calls Used:",
+    "comingSoon": "Student Dashboard - Coming Soon",
+    "joinRoomButton": "Join Room",
+    "logoutButton": "Logout",
+    "errorFetchUsage": "Failed to fetch API usage"
+  },
+  "teacher": {
+    "welcomeTitle": "Welcome, Teacher!",
+    "apiUsageLabel": "API Calls Used:",
+    "comingSoon": "Teacher Dashboard - Coming Soon",
+    "createRoomButton": "Create Room",
+    "logoutButton": "Logout",
+    "errorFetchUsage": "Failed to fetch API usage"
+  },
+  "admin": {
+    "dashboardTitle": "Admin Dashboard",
+    "monitorSubtitle": "API Consumption Monitor",
+    "tableHeaderEmail": "User Email",
+    "tableHeaderCalls": "API Calls Made",
+    "logoutButton": "Logout",
+    "errorFetchUsers": "Failed to fetch all user usage"
+  }
+}
