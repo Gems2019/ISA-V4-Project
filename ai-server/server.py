@@ -8,8 +8,23 @@ import numpy as np
 from contextlib import asynccontextmanager
 
 
-# Model configuration
+# Configuration / constants
 MODEL_NAME = "openai/whisper-small"
+APP_TITLE = "Speech Transcription API"
+ROOT_PATH = "/"
+TRANSCRIBE_PATH = "/transcribe"
+HOST = "0.0.0.0"
+DEFAULT_PORT = 8000
+
+# Generation parameters
+LANGUAGE = "en"
+TASK = "transcribe"
+
+# Device names and dtypes
+CUDA_DEVICE = "cuda"
+CPU_DEVICE = "cpu"
+DTYPE_CUDA = torch.float16
+DTYPE_CPU = torch.float32
 
 
 class ModelCache:
@@ -22,17 +37,17 @@ def load_model():
     """Load the ASR model if not already loaded."""
     if ModelCache.model is None:
         # Detect device
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-        
+        device = CUDA_DEVICE if torch.cuda.is_available() else CPU_DEVICE
+        dtype = DTYPE_CUDA if torch.cuda.is_available() else DTYPE_CPU
+
         print(f"Loading Whisper model on {device} with dtype {dtype}...")
-        
+
         ModelCache.processor = WhisperProcessor.from_pretrained(MODEL_NAME)
         ModelCache.model = WhisperForConditionalGeneration.from_pretrained(
             MODEL_NAME,
             dtype=dtype
         ).to(device)
-        
+
         print("Model loaded successfully!")
     
     return ModelCache.model, ModelCache.processor
@@ -45,14 +60,14 @@ def create_app() -> FastAPI:
         load_model()
         yield
 
-    app = FastAPI(title="Speech Transcription API", lifespan=lifespan)
-    
-    @app.get("/")
+    app = FastAPI(title=APP_TITLE, lifespan=lifespan)
+
+    @app.get(ROOT_PATH)
     async def root():
         """Health check endpoint."""
-        return {"message": "Speech Transcription API", "status": "running"}
-    
-    @app.post("/transcribe")
+        return {"message": APP_TITLE, "status": "running"}
+
+    @app.post(TRANSCRIBE_PATH)
     async def transcribe_audio(file: UploadFile = File(...)):
         """
         Receive an audio file (MP3/WAV) and return the transcription.
@@ -67,11 +82,11 @@ def create_app() -> FastAPI:
         # Convert to mono if stereo
         if len(audio_data.shape) > 1:
             audio_data = np.mean(audio_data, axis=1)
-        
+
         # Process audio - Whisper expects 16kHz sample rate
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-        
+        device = CUDA_DEVICE if torch.cuda.is_available() else CPU_DEVICE
+        dtype = DTYPE_CUDA if torch.cuda.is_available() else DTYPE_CPU
+
         inputs = asr_processor(
             audio_data,
             sampling_rate=sample_rate,
@@ -81,7 +96,7 @@ def create_app() -> FastAPI:
         
         # Convert inputs to the same dtype as the model and move to device
         inputs = inputs.to(device)
-        if dtype == torch.float16:
+        if dtype == DTYPE_CUDA:
             inputs.input_features = inputs.input_features.half()
         
         # Generate transcription
@@ -89,8 +104,8 @@ def create_app() -> FastAPI:
             predicted_ids = asr_model.generate(
                 inputs.input_features,
                 attention_mask=inputs.attention_mask,
-                language="en",
-                task="transcribe"
+                language=LANGUAGE,
+                task=TASK,
             )
         
         # Decode to get transcription
@@ -106,4 +121,4 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    uvicorn.run(app, host=HOST, port=int(os.environ.get("PORT", DEFAULT_PORT)))

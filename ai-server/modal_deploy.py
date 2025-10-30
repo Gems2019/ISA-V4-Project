@@ -2,35 +2,51 @@ import modal
 from modal import App, Image
 
 # Create a Modal app
-app = App("isa-ai-server")
+# Configuration / constants
+APP_NAME = "isa-ai-server"
+PYTHON_VERSION = "3.11"
+PIP_PACKAGES = [
+    "fastapi",
+    "uvicorn",
+    "transformers",
+    "torch",
+    "soundfile",
+    "python-multipart",
+    "accelerate",
+    "numpy",
+    "huggingface_hub",
+    "peft",
+    "hf_xet",
+]
+
+# Local file to include in the Modal image (source, destination)
+SERVER_LOCAL = "server.py"
+SERVER_DEST = "/root/server.py"
+
+# Deployment settings
+GPU_TYPE = "T4"
+TIMEOUT = 600
+SCALEDOWN_WINDOW = 300  # 300 seconds = 5 mins
+MAX_INPUTS = 10
+
+
+app = App(APP_NAME)
 
 # Define the container image with all dependencies
 image = (
-    Image.debian_slim(python_version="3.11")
-    .pip_install(
-        "fastapi",
-        "uvicorn",
-        "transformers",
-        "torch",
-        "soundfile",
-        "python-multipart",
-        "accelerate",
-        "numpy",
-        "huggingface_hub",
-        "peft",
-        "hf_xet"
-    )
-    .add_local_file("server.py", "/root/server.py")
+    Image.debian_slim(python_version=PYTHON_VERSION)
+    .pip_install(*PIP_PACKAGES)
+    .add_local_file(SERVER_LOCAL, SERVER_DEST)
 )
 
 
 @app.function(
     image=image,
-    gpu="T4",
-    timeout=600,
-    scaledown_window=300,  # Keep container warm for 5 minutes after last request
+    gpu=GPU_TYPE,
+    timeout=TIMEOUT,
+    scaledown_window=SCALEDOWN_WINDOW,  # Keep container warm for 5 minutes after last request
 )
-@modal.concurrent(max_inputs=10)  # Allow up to 10 concurrent requests per container
+@modal.concurrent(max_inputs=MAX_INPUTS)  # Allow up to MAX_INPUTS concurrent requests per container
 @modal.asgi_app()
 def fastapi_app():
     """
