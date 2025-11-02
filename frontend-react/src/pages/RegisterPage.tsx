@@ -210,7 +210,7 @@ const RegisterPage = () => {
           {success && <SuccessMessage>{success}</SuccessMessage>}
           <SubmitButton type="submit">Create Account</SubmitButton>
           <Footer>
-            Already have an account? <LoginLink onClick={() => navigate('/login')}>Signin</LoginLink>
+            Already have an account? <LoginLink onClick={() => navigate('/login')}>Sign in</LoginLink>
           </Footer>
         </FormContent>
       </FormCard>
