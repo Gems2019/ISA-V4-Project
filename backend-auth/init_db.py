@@ -13,26 +13,26 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT PRIMARY KEY UNIQUE NOT NULL,
     password TEXT NOT NULL,
     user_type TEXT NOT NULL CHECK(user_type IN ('admin', 'teacher', 'student')),
-    api_token TEXT NOT NULL
+    api_token_uses INTEGER DEFAULT 20
 )
 ''')
 
 # Pre-register admin user
 cursor.execute('''
-INSERT OR IGNORE INTO users (email, password, user_type, api_token)
-VALUES ('admin@admin.com', '111', 'admin', 'admintoken123')
+INSERT OR IGNORE INTO users (email, password, user_type)
+VALUES ('admin@admin.com', '111', 'admin')
 ''')
 
 # Pre-register teacher user
 cursor.execute('''
-INSERT OR IGNORE INTO users (email, password, user_type, api_token)
-VALUES ('teacher@teacher.com', '123', 'teacher', 'teachertoken123')
+INSERT OR IGNORE INTO users (email, password, user_type)
+VALUES ('teacher@teacher.com', '123', 'teacher')
 ''')
 
 # Pre-register student user
 cursor.execute('''
-INSERT OR IGNORE INTO users (email, password, user_type, api_token)
-VALUES ('john@john.com', '123', 'student', 'studenttoken123')
+INSERT OR IGNORE INTO users (email, password, user_type)
+VALUES ('john@john.com', '123', 'student')
 ''')
 
 conn.commit()
