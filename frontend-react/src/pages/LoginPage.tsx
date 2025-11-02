@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthTokenRole';
 import apiClient from '../services/apiClient';
 import { jwtDecode } from 'jwt-decode';
 import styled from 'styled-components';
+import messages from '../config/messages.json';
 
 // Define the shape of your decoded token
 interface DecodedToken {
@@ -184,7 +185,7 @@ const LoginPage = () => {
       }
       
     } catch (err) {
-      setError('Invalid email or password.');
+      setError(messages.login.errorInvalidCredentials);
     }
   };
 
@@ -192,8 +193,8 @@ const LoginPage = () => {
     <Container>
       <FormCard>
         <Header>
-          <Title>Welcome Back</Title>
-          <Subtitle>Please sign-in to continue!</Subtitle>
+          <Title>{messages.login.title}</Title>
+          <Subtitle>{messages.login.subtitle}</Subtitle>
         </Header>
         <FormContent onSubmit={handleSubmit}>
           <InputGroup>
@@ -201,7 +202,7 @@ const LoginPage = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
+              placeholder={messages.login.emailPlaceholder}
               required
             />
           </InputGroup>
@@ -210,15 +211,15 @@ const LoginPage = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder={messages.login.passwordPlaceholder}
               required
             />
           </InputGroup>
-          <ForgotPassword href="#">Forget your password?</ForgotPassword>
+          <ForgotPassword href="#">{messages.login.forgotPassword}</ForgotPassword>
           {error && <ErrorMessage>{error}</ErrorMessage>}
-          <SubmitButton type="submit">Signin</SubmitButton>
+          <SubmitButton type="submit">{messages.login.submitButton}</SubmitButton>
           <Footer>
-            Don't have an account? <SignupLink onClick={() => navigate('/register')}>Signup</SignupLink>
+            {messages.login.noAccountText} <SignupLink onClick={() => navigate('/register')}>{messages.login.signupLink}</SignupLink>
           </Footer>
         </FormContent>
       </FormCard>

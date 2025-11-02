@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthTokenRole';
 import apiClient from '../services/apiClient';
+import messages from '../config/messages.json';
 
 interface UserUsage {
   id: number;
@@ -19,7 +20,7 @@ const AdminLandingPage = () => {
         const response = await apiClient.get<UserUsage[]>('/admin/all-usage');
         setUsers(response.data);
       } catch (error) {
-        console.error('Failed to fetch all user usage', error);
+        console.error(messages.admin.errorFetchUsers, error);
       }
     };
     fetchAllUsage();
@@ -27,13 +28,13 @@ const AdminLandingPage = () => {
 
   return (
     <div>
-      <h2>Admin Dashboard</h2>
-      <h3>API Consumption Monitor</h3>
+      <h2>{messages.admin.dashboardTitle}</h2>
+      <h3>{messages.admin.monitorSubtitle}</h3>
       <table>
         <thead>
           <tr>
-            <th>User Email</th>
-            <th>API Calls Made</th>
+            <th>{messages.admin.tableHeaderEmail}</th>
+            <th>{messages.admin.tableHeaderCalls}</th>
           </tr>
         </thead>
         <tbody>
@@ -45,7 +46,7 @@ const AdminLandingPage = () => {
           ))}
         </tbody>
       </table>
-      <button onClick={logout}>Logout</button>
+      <button onClick={logout}>{messages.admin.logoutButton}</button>
     </div>
   );
 };

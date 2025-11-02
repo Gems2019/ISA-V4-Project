@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthTokenRole';
 import apiClient from '../services/apiClient';
+import messages from '../config/messages.json';
 
 interface ApiUsage {
   count: number;
@@ -19,7 +20,7 @@ const TeacherLandingPage = () => {
         const response = await apiClient.get<ApiUsage>('/api/usage');
         setApiUsage(response.data);
       } catch (error) {
-        console.error('Failed to fetch API usage', error);
+        console.error(messages.teacher.errorFetchUsage, error);
       }
     };
     fetchUsage();
@@ -27,14 +28,13 @@ const TeacherLandingPage = () => {
 
   return (
     <div>
-      <h2>Welcome, Teacher!</h2>
+      <h2>{messages.teacher.welcomeTitle}</h2>
       <p>
-        API Calls Used: {apiUsage.count} / {apiUsage.limit}
+        {messages.teacher.apiUsageLabel} {apiUsage.count} / {apiUsage.limit}
       </p>
-      <p>Teacher Dashboard - Coming Soon</p>
-    <button onClick={logout}>Create Room</button>
-
-      <button onClick={logout}>Logout</button>
+      <p>{messages.teacher.comingSoon}</p>
+      <button>{messages.teacher.createRoomButton}</button>
+      <button onClick={logout}>{messages.teacher.logoutButton}</button>
     </div>
   );
 };
