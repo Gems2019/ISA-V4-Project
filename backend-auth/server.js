@@ -21,13 +21,12 @@ app.post('/register', (req, res) => {
     if (row) {
       return res.status(409).json({ success: false, message: 'Email already registered.' });
     }
-    const api_token = crypto.randomBytes(32).toString('hex');
     db.run(
-      'INSERT INTO users (email, password, user_type, api_token) VALUES (?, ?, ?, ?)',
-      [email, password, user_type, api_token],
+      'INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)',
+      [email, password, user_type],
       (err) => {
         if (err) return res.status(500).json({ success: false, message: 'Database error.' });
-        res.json({ success: true, message: 'Registration successful!', api_token });
+        res.json({ success: true, message: 'Registration successful!' });
       }
     );
   });
@@ -39,14 +38,14 @@ app.post('/login', (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ success: false, message: 'Missing email or password.' });
   }
-  db.get('SELECT email, user_type, api_token FROM users WHERE email = ? AND password = ?', [email, password], (err, row) => {
+  db.get('SELECT email, user_type, api_token_uses FROM users WHERE email = ? AND password = ?', [email, password], (err, row) => {
     if (err) return res.status(500).json({ success: false, message: 'Database error.' });
     if (!row) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
     // Return role and token
-    res.json({ success: true, role: row.user_type, api_token: row.api_token });
+    res.json({ success: true, role: row.user_type, api_token: row.api_token_uses });
   });
 });
 
