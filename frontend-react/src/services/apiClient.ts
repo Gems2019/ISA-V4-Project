@@ -1,8 +1,7 @@
-
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'http://myWebAPIServer.ca', // Your backend server address!
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
 });
 
 // Interceptor: Runs BEFORE each request is sent

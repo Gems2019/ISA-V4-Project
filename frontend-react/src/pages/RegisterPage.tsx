@@ -82,6 +82,24 @@ const Input = styled.input`
   }
 `;
 
+const Select = styled.select`
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background-color: white;
+  cursor: pointer;
+  
+  &:focus {
+    outline: none;
+    border-color: #f5a623;
+    box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.1);
+  }
+`;
+
 const SubmitButton = styled.button`
   width: 100%;
   padding: 15px;
@@ -140,6 +158,7 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [userType, setUserType] = useState<'student' | 'teacher'>('student'); // Changed: removed 'admin'
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
@@ -149,20 +168,22 @@ const RegisterPage = () => {
     setError('');
     setSuccess('');
 
-    // Validate passwords match
     if (password !== confirmPassword) {
       setError(messages.register.errorPasswordMismatch);
       return;
     }
 
-    // Validate password length
     if (password.length < 6) {
       setError(messages.register.errorPasswordLength);
       return;
     }
 
     try {
-      await apiClient.post('/register', { email, password });
+      await apiClient.post('/register', { 
+        email, 
+        password,
+        user_type: userType
+      });
       setSuccess(messages.register.successRegistration);
       setTimeout(() => {
         navigate('/login');
@@ -207,6 +228,18 @@ const RegisterPage = () => {
               required
             />
           </InputGroup>
+          
+          {/* User Type Selection - Student or Teacher only */}
+          <InputGroup>
+            <Select 
+              value={userType} 
+              onChange={(e) => setUserType(e.target.value as 'student' | 'teacher')}
+            >
+              <option value="student">Student</option>
+              <option value="teacher">Teacher</option>
+            </Select>
+          </InputGroup>
+
           {error && <ErrorMessage>{error}</ErrorMessage>}
           {success && <SuccessMessage>{success}</SuccessMessage>}
           <SubmitButton type="submit">{messages.register.submitButton}</SubmitButton>
