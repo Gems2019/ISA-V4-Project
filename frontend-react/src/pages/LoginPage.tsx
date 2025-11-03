@@ -3,16 +3,8 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthTokenRole';
 import apiClient from '../services/apiClient';
-import { jwtDecode } from 'jwt-decode';
 import styled from 'styled-components';
 import messages from '../config/messages.json';
-
-// Define the shape of your decoded token
-interface DecodedToken {
-  role: 'student' | 'teacher' | 'admin';
-  iat: number;
-  exp: number;
-}
 
 // Styled Components
 const Container = styled.div`
@@ -161,21 +153,25 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
     try {
-      const response = await apiClient.post<{ token: string }>('/login', {
+      const response = await apiClient.post<{ 
+        success: boolean;
+        role: 'student' | 'teacher' | 'admin';
+        api_token: number;
+      }>('/login', {
         email,
         password,
       });
       
-      const { token } = response.data;
+      const { role, api_token } = response.data;
       
-      // Decode the token to find the user's role
-      const decodedToken = jwtDecode<DecodedToken>(token);
-      const role = decodedToken.role;
+      // Store email as token and token count in localStorage
+      localStorage.setItem('token', email);
+      localStorage.setItem('api_token_uses', api_token.toString());
       
       // Call the global login function!
-      login(token, role); 
+      login(email, role); 
       
-      // Send user to their correct dashboard
+      // Send user to their correct dashboard based on role from database
       if (role === 'admin') {
         navigate('/admin');
       } else if (role === 'teacher') {

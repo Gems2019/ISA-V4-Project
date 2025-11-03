@@ -1,52 +1,90 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthTokenRole';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
-import messages from '../config/messages.json';
 
-interface UserUsage {
-  id: number;
+interface User {
   email: string;
-  call_count: number;
+  user_type: string;
+  api_token_uses: number;
 }
 
-const AdminLandingPage = () => {
-  const { logout } = useAuth();
-  const [users, setUsers] = useState<UserUsage[]>([]);
+const AdminLandingPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    const fetchAllUsage = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    // Fetch all users from backend
+    const fetchUsers = async () => {
       try {
-        // This endpoint should be admin-only!
-        const response = await apiClient.get<UserUsage[]>('/admin/all-usage');
-        setUsers(response.data);
-      } catch (error) {
-        console.error(messages.admin.errorFetchUsers, error);
+        const response = await apiClient.get('/admin/all-users');
+        if (response.data.success) {
+          setUsers(response.data.users);
+        }
+      } catch (err) {
+        console.error('Error fetching users:', err);
       }
     };
-    fetchAllUsage();
-  }, []);
+
+    fetchUsers();
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('api_token_uses');
+    navigate('/login');
+  };
+
+  // Separate users by type
+  const teachers = users.filter(u => u.user_type === 'teacher');
+  const students = users.filter(u => u.user_type === 'student');
 
   return (
-    <div>
-      <h2>{messages.admin.dashboardTitle}</h2>
-      <h3>{messages.admin.monitorSubtitle}</h3>
-      <table>
+    <div style={{ padding: '20px' }}>
+      <h1>Admin Dashboard</h1>
+      <button onClick={handleLogout}>Logout</button>
+
+      <h2>Teachers</h2>
+      <table border={1} style={{ marginBottom: '20px' }}>
         <thead>
           <tr>
-            <th>{messages.admin.tableHeaderEmail}</th>
-            <th>{messages.admin.tableHeaderCalls}</th>
+            <th>Email</th>
+
+            <th>Tokens Remaining</th>
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td>{user.email}</td>
-              <td>{user.call_count}</td>
+          {teachers.map(teacher => (
+            <tr key={teacher.email}>
+              <td>{teacher.email}</td>
+              <td>{teacher.api_token_uses}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <button onClick={logout}>{messages.admin.logoutButton}</button>
+
+      <h2>Students</h2>
+      <table border={1}>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Tokens Remaining</th>
+          </tr>
+        </thead>
+        <tbody>
+          {students.map(student => (
+            <tr key={student.email}>
+              <td>{student.email}</td>
+              <td>{student.api_token_uses}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };

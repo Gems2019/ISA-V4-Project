@@ -10,7 +10,7 @@ app.use(express.json());
 const corsOptions = {
   origin: [
     'http://localhost:5173', // Local Vite dev server
-    'http://localhost:3000', // Alternative local dev port
+    'http://localhost:8000', // Alternative local dev port
     'https://witty-mud-0dcfca710.3.azurestaticapps.net' // Azure Static Web Apps frontend
   ],
   credentials: true, // Allow cookies and authentication headers
@@ -115,10 +115,31 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    // Return role and token
-    res.json({ success: true, role: row.user_type, api_token: row.api_token_uses });
+    // Deduct 1 token on successful login
+    const newTokenCount = row.api_token_uses - 1;
+    await dbRun('UPDATE users SET api_token_uses = ? WHERE email = ?', [newTokenCount, email]);
+
+    // Return role and updated token count
+    res.json({ success: true, role: row.user_type, api_token: newTokenCount });
   } catch (err) {
     console.error('Login error', err);
+    return res.status(500).json({ success: false, message: 'Database error.' });
+  }
+});
+
+// Get all users endpoint (for admin)
+app.get('/admin/all-users', async (req, res) => {
+  try {
+    const users = await new Promise((resolve, reject) => {
+      db.all('SELECT email, user_type, api_token_uses FROM users', [], (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
+    });
+    
+    res.json({ success: true, users });
+  } catch (err) {
+    console.error('Get all users error', err);
     return res.status(500).json({ success: false, message: 'Database error.' });
   }
 });
