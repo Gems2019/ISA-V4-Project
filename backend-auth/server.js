@@ -2,6 +2,8 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -18,8 +20,21 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Connect to SQLite DB
-const db = new sqlite3.Database('users.db');
+// Connect to SQLite DB (path configurable via DB_PATH env var — e.g. Railway volume)
+const DB_PATH = process.env.DB_PATH || 'users.db';
+
+// Ensure parent directory exists when DB_PATH specifies a directory
+const dbDir = path.dirname(DB_PATH);
+if (dbDir && dbDir !== '.') {
+  try {
+    fs.mkdirSync(dbDir, { recursive: true });
+  } catch (err) {
+    console.error('Failed to create DB directory', dbDir, err);
+  }
+}
+
+const db = new sqlite3.Database(DB_PATH);
+console.log('Using SQLite DB at', DB_PATH);
 
 // Promisified helpers for sqlite3
 function dbRun(sql, params = []) {
@@ -51,8 +66,8 @@ async function initDb() {
   )`;
 
   try {
-    await dbRun(createTableSql);
-    console.log('Users table ready (users.db)');
+  await dbRun(createTableSql);
+  console.log('Users table ready at', DB_PATH);
 
     // Seed default users (only if not present)
     const seeds = [
