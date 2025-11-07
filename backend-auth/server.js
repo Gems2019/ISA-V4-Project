@@ -157,13 +157,9 @@ app.post('/login', async (req, res) => {
     if (!match) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
-
-    // Deduct 1 token on successful login
-    const newTokenCount = row.api_token_uses - 1;
-    await query('UPDATE users SET api_token_uses = ? WHERE email = ?', [newTokenCount, email]);
-
-    // Return role and updated token count
-    res.json({ success: true, role: row.user_type, api_token: newTokenCount });
+    
+    // Return role and token count
+    res.json({ success: true, role: row.user_type, api_token: row.api_token_uses });
   } catch (err) {
     console.error('Login error', err);
     return res.status(500).json({ success: false, message: 'Database error.' });
