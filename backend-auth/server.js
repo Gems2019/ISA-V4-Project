@@ -12,7 +12,9 @@ const corsOrigins = [
   'http://localhost:8000', // Alternative local dev port
 ];
 if (process.env.CORS_ORIGINS) {
-  corsOrigins.push(process.env.CORS_ORIGINS); // Adds frontend endpoint if it is an environment variable
+  // Split multiple origins by comma and trim whitespace
+  const additionalOrigins = process.env.CORS_ORIGINS.split(',').map(origin => origin.trim());
+  corsOrigins.push(...additionalOrigins);
 }
 const corsOptions = {
   origin: (origin, callback) => {
@@ -242,6 +244,7 @@ app.get('/admin/all-users', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 8000;
+const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for deployment
 
 // Initialize DB then start server
 async function startServer() {
@@ -253,8 +256,11 @@ async function startServer() {
     // Then create client pool for runtime queries
     await createClientPool();
     
-    // Start server
-    app.listen(PORT, () => console.log(`User microservice running on http://localhost:${PORT}`));
+    // Start server - bind to 0.0.0.0 for deployment platforms
+    app.listen(PORT, HOST, () => {
+      console.log(`User microservice running on http://${HOST}:${PORT}`);
+      console.log(`Allowed CORS origins: ${corsOrigins.join(', ')}`);
+    });
   } catch (err) {
     console.error('Failed to initialize, exiting.', err);
     process.exit(1);
