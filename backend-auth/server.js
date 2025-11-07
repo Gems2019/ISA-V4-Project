@@ -16,12 +16,32 @@ if (process.env.CORS_ORIGINS) {
   const additionalOrigins = process.env.CORS_ORIGINS.split(',').map(origin => origin.trim());
   corsOrigins.push(...additionalOrigins);
 }
+
+// More permissive CORS for Railway deployment
 const corsOptions = {
   origin: (origin, callback) => {
-    // allow non-browser requests like curl or same-origin (no origin)
-    if (!origin) return callback(null, true);
-    if (corsOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('CORS policy: Origin not allowed'));
+    // Allow non-browser requests like Postman, curl, or same-origin (no origin header)
+    if (!origin) {
+      console.log('CORS: Request with no origin (Postman/curl/same-origin) - ALLOWED');
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list
+    if (corsOrigins.includes(origin)) {
+      console.log(`CORS: Origin ${origin} - ALLOWED`);
+      return callback(null, true);
+    }
+    
+    // In production with CORS_ORIGINS set, be strict
+    // In development (no CORS_ORIGINS env var), be permissive for easier testing
+    if (process.env.CORS_ORIGINS) {
+      console.warn(`CORS: Origin ${origin} - BLOCKED (not in allowed list)`);
+      return callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+    } else {
+      // Development mode - allow all origins but log a warning
+      console.warn(`CORS: Origin ${origin} - ALLOWED (development mode - no CORS_ORIGINS set)`);
+      return callback(null, true);
+    }
   },
   credentials: true, // Allow cookies and authentication headers
   optionsSuccessStatus: 200
@@ -241,6 +261,26 @@ app.get('/admin/all-users', async (req, res) => {
     console.error('Get all users error', err);
     return res.status(500).json({ success: false, message: 'Database error.' });
   }
+});
+
+// Global error handler for unhandled errors
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ 
+    success: false, 
+    message: err.message || 'Internal server error',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    success: false, 
+    message: 'Endpoint not found',
+    path: req.path,
+    method: req.method
+  });
 });
 
 const PORT = process.env.PORT || 8000;
