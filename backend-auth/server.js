@@ -1,9 +1,7 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const mysql = require('mysql2/promise');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
-const fs = require('fs');
-const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -20,79 +18,83 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Connect to SQLite DB (path configurable via DB_PATH env var — e.g. Railway volume)
-let DB_PATH = process.env.DB_PATH || 'users.db';
-
-// If DB_PATH points at an existing directory, or ends with a path separator,
-// assume user meant a directory and use a filename inside it.
-try {
-  if (DB_PATH.endsWith(path.sep) || (fs.existsSync(DB_PATH) && fs.statSync(DB_PATH).isDirectory())) {
-    DB_PATH = path.join(DB_PATH, 'users.db');
-  }
-} catch (err) {
-  // If stat fails, we'll handle when trying to create directory/file below
-}
-
-// Ensure parent directory exists when DB_PATH specifies a directory
-const dbDir = path.dirname(DB_PATH);
-if (dbDir && dbDir !== '.') {
+// Health check endpoint
+app.get('/health', async (req, res) => {
   try {
-    fs.mkdirSync(dbDir, { recursive: true });
+    // Check database connection
+    await query('SELECT 1');
+    res.json({ 
+      status: 'healthy', 
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
   } catch (err) {
-    console.error('Failed to create DB directory', dbDir, err);
-  }
-}
-
-// Check that parent directory is writable
-try {
-  fs.accessSync(dbDir || '.', fs.constants.W_OK);
-} catch (err) {
-  console.error(`DB directory is not writable: ${dbDir || '.'}. Set DB_PATH to a writable location or adjust permissions.`);
-  throw err;
-}
-
-const db = new sqlite3.Database(DB_PATH, (err) => {
-  if (err) {
-    console.error('Failed to open SQLite DB at', DB_PATH, err);
-    // rethrow so initDb catch handles exit
-    throw err;
+    res.status(503).json({ 
+      status: 'unhealthy', 
+      database: 'disconnected',
+      error: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
-console.log('Using SQLite DB at', DB_PATH);
+// MySQL connection configuration
+// For Railway, set these environment variables in your Railway project
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 3306,
+  user: process.env.DB_USER || 'backend_admin',
+  password: process.env.DB_PASSWORD || 'backend_password',
+  database: process.env.DB_NAME || 'auth_db',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+};
 
-// Promisified helpers for sqlite3
-function dbRun(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) return reject(err);
-      resolve(this);
-    });
-  });
+// Create connection pool
+let pool;
+
+// Initialize connection pool
+async function createPool() {
+  try {
+    pool = mysql.createPool(dbConfig);
+    // Test the connection
+    const connection = await pool.getConnection();
+    console.log('Successfully connected to MySQL database');
+    connection.release();
+    return pool;
+  } catch (err) {
+    console.error('Failed to connect to MySQL database:', err);
+    throw err;
+  }
 }
 
-function dbGet(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) return reject(err);
-      resolve(row);
-    });
-  });
+// Helper function to execute queries
+async function query(sql, params = []) {
+  try {
+    const [results] = await pool.execute(sql, params);
+    return results;
+  } catch (err) {
+    console.error('Query error:', err);
+    throw err;
+  }
 }
 
 // Initialize DB: create tables and seed users if they don't exist
 async function initDb() {
   const createTableSql = `
   CREATE TABLE IF NOT EXISTS users (
-      email TEXT PRIMARY KEY UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      user_type TEXT NOT NULL CHECK(user_type IN ('admin', 'teacher', 'student')),
-      api_token_uses INTEGER DEFAULT 20
-  )`;
+      email VARCHAR(255) PRIMARY KEY,
+      password VARCHAR(255) NOT NULL,
+      user_type ENUM('admin', 'teacher', 'student') NOT NULL,
+      api_token_uses INT DEFAULT 20,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
   try {
-  await dbRun(createTableSql);
-  console.log('Users table ready at', DB_PATH);
+    await query(createTableSql);
+    console.log('Users table ready');
 
     // Seed default users (only if not present)
     const seeds = [
@@ -102,10 +104,10 @@ async function initDb() {
     ];
 
     for (const u of seeds) {
-      const existing = await dbGet('SELECT email FROM users WHERE email = ?', [u.email]);
-      if (!existing) {
+      const existing = await query('SELECT email FROM users WHERE email = ?', [u.email]);
+      if (existing.length === 0) {
         const hash = await bcrypt.hash(u.password, 12);
-        await dbRun('INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)', [u.email, hash, u.user_type]);
+        await query('INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)', [u.email, hash, u.user_type]);
         console.log(`Inserted seed user: ${u.email}`);
       }
     }
@@ -123,13 +125,13 @@ app.post('/register', async (req, res) => {
   }
 
   try {
-    const existing = await dbGet('SELECT email FROM users WHERE email = ?', [email]);
-    if (existing) {
+    const existing = await query('SELECT email FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
       return res.status(409).json({ success: false, message: 'Email already registered.' });
     }
 
     const hash = await bcrypt.hash(password, 12);
-    await dbRun('INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)', [email, hash, user_type]);
+    await query('INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)', [email, hash, user_type]);
     res.json({ success: true, message: 'Registration successful!' });
   } catch (err) {
     console.error('Register error', err);
@@ -145,11 +147,12 @@ app.post('/login', async (req, res) => {
   }
 
   try {
-    const row = await dbGet('SELECT email, user_type, password, api_token_uses FROM users WHERE email = ?', [email]);
-    if (!row) {
+    const rows = await query('SELECT email, user_type, password, api_token_uses FROM users WHERE email = ?', [email]);
+    if (rows.length === 0) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
+    const row = rows[0];
     const match = await bcrypt.compare(password, row.password);
     if (!match) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
@@ -157,7 +160,7 @@ app.post('/login', async (req, res) => {
 
     // Deduct 1 token on successful login
     const newTokenCount = row.api_token_uses - 1;
-    await dbRun('UPDATE users SET api_token_uses = ? WHERE email = ?', [newTokenCount, email]);
+    await query('UPDATE users SET api_token_uses = ? WHERE email = ?', [newTokenCount, email]);
 
     // Return role and updated token count
     res.json({ success: true, role: row.user_type, api_token: newTokenCount });
@@ -170,12 +173,7 @@ app.post('/login', async (req, res) => {
 // Get all users endpoint (for admin)
 app.get('/admin/all-users', async (req, res) => {
   try {
-    const users = await new Promise((resolve, reject) => {
-      db.all('SELECT email, user_type, api_token_uses FROM users', [], (err, rows) => {
-        if (err) return reject(err);
-        resolve(rows);
-      });
-    });
+    const users = await query('SELECT email, user_type, api_token_uses FROM users', []);
     
     res.json({ success: true, users });
   } catch (err) {
@@ -187,11 +185,12 @@ app.get('/admin/all-users', async (req, res) => {
 const PORT = process.env.PORT || 8000;
 
 // Initialize DB then start server
-initDb()
+createPool()
+  .then(() => initDb())
   .then(() => {
     app.listen(PORT, () => console.log(`User microservice running on http://localhost:${PORT}`));
   })
   .catch((err) => {
-    console.error('Failed to initialize DB, exiting.', err);
+    console.error('Failed to initialize, exiting.', err);
     process.exit(1);
   });
