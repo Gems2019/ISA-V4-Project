@@ -14,18 +14,9 @@ const corsOptions = {
     'https://salmon-tree-0e98fe510.3.azurestaticapps.net' // Azure Static Web Apps frontend
   ],
   credentials: true, // Allow cookies and authentication headers
-  // Allow common methods and headers used by the frontend so preflight (OPTIONS)
-  // requests succeed. application/json and Authorization are not "simple"
-  // requests so the browser will send a CORS preflight which the server must
-  // answer with the appropriate Access-Control-Allow-* headers.
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
-// Explicitly handle preflight for all routes. Use '/*' instead of '*' so
-// path-to-regexp (used by Express) can parse the route without error.
-app.options('/*', cors(corsOptions));
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
