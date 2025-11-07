@@ -1,77 +1,62 @@
-const express = require('express');
+const http = require('http');
+const url = require('url');
 const mysql = require('mysql2/promise');
-const cors = require('cors');
 const bcrypt = require('bcrypt');
-
-const app = express();
-app.use(express.json());
 
 // Configure CORS with specific allowed origins
 const corsOrigins = [
-  'http://localhost:5173', // Local Vite dev server
-  'http://localhost:8000', // Alternative local dev port
+  'http://localhost:5173',
+  'http://localhost:8000',
 ];
 if (process.env.CORS_ORIGINS) {
-  // Split multiple origins by comma and trim whitespace
   const additionalOrigins = process.env.CORS_ORIGINS.split(',').map(origin => origin.trim());
   corsOrigins.push(...additionalOrigins);
 }
 
-// More permissive CORS for Railway deployment
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow non-browser requests like Postman, curl, or same-origin (no origin header)
-    if (!origin) {
-      console.log('CORS: Request with no origin (Postman/curl/same-origin) - ALLOWED');
-      return callback(null, true);
-    }
-    
-    // Check if origin is in allowed list
-    if (corsOrigins.includes(origin)) {
-      console.log(`CORS: Origin ${origin} - ALLOWED`);
-      return callback(null, true);
-    }
-    
-    // In production with CORS_ORIGINS set, be strict
-    // In development (no CORS_ORIGINS env var), be permissive for easier testing
-    if (process.env.CORS_ORIGINS) {
-      console.warn(`CORS: Origin ${origin} - BLOCKED (not in allowed list)`);
-      return callback(new Error(`CORS policy: Origin ${origin} not allowed`));
-    } else {
-      // Development mode - allow all origins but log a warning
-      console.warn(`CORS: Origin ${origin} - ALLOWED (development mode - no CORS_ORIGINS set)`);
-      return callback(null, true);
-    }
-  },
-  credentials: true, // Allow cookies and authentication headers
-  optionsSuccessStatus: 200
-};
-app.use(cors(corsOptions));
+// Helper: Check if origin is allowed
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  if (corsOrigins.includes(origin)) return true;
+  if (!process.env.CORS_ORIGINS) return true;
+  return false;
+}
 
-// Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    // Check database connection
-    await query('SELECT 1');
-    res.json({ 
-      status: 'healthy', 
-      database: 'connected',
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    res.status(503).json({ 
-      status: 'unhealthy', 
-      database: 'disconnected',
-      error: err.message,
-      timestamp: new Date().toISOString()
-    });
+// Helper: Set CORS headers
+function setCorsHeaders(res, origin) {
+  const allowed = isOriginAllowed(origin);
+  if (allowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
-});
+  return allowed;
+}
+
+// Helper: Parse JSON body
+async function parseBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => body += chunk.toString());
+    req.on('end', () => {
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch (err) {
+        reject(err);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+// Helper: Send JSON response
+function sendJson(res, statusCode, data) {
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(data));
+}
 
 // MySQL connection configuration
-// For Railway, set these environment variables in your Railway project
-
-// Admin connection for initialization (CREATE TABLE, seeding)
 const adminDbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,
@@ -83,7 +68,6 @@ const adminDbConfig = {
   queueLimit: 0
 };
 
-// Frontend client connection for runtime API queries
 const clientDbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,
@@ -95,15 +79,13 @@ const clientDbConfig = {
   queueLimit: 0
 };
 
-// Connection pools
-let adminPool;  // Used for initialization only
-let clientPool; // Used for runtime API queries
+let adminPool;
+let clientPool;
 
 // Initialize admin connection pool
 async function createAdminPool() {
   try {
     adminPool = mysql.createPool(adminDbConfig);
-    // Wait for connection with retries (handles transient DB startup on hosted platforms)
     await waitForConnection(adminPool);
     console.log('Successfully connected to MySQL database as admin');
     return adminPool;
@@ -127,17 +109,23 @@ async function createClientPool() {
 }
 
 // Helper: wait for a pool to accept connections with retries/backoff
-async function waitForConnection(pool, attempts = 8, delayMs = 2000) {
+async function waitForConnection(pool, attempts = 15, delayMs = 3000) {
   for (let i = 1; i <= attempts; i++) {
     try {
+      console.log(`  Attempt ${i}/${attempts}: Connecting to database...`);
       const conn = await pool.getConnection();
       conn.release();
+      console.log(`  ✅ Connection successful!`);
       return;
     } catch (err) {
       const msg = err && err.message ? err.message : String(err);
-      console.warn(`DB connection attempt ${i} failed: ${msg}`);
-      if (i === attempts) throw err;
-      // eslint-disable-next-line no-await-in-loop
+      console.warn(`  ❌ Attempt ${i}/${attempts} failed: ${msg}`);
+      if (i === attempts) {
+        console.error(`  💥 All ${attempts} connection attempts exhausted!`);
+        console.error(`  Check your Railway MySQL service and environment variables.`);
+        throw err;
+      }
+      console.log(`  ⏳ Waiting ${delayMs/1000}s before retry...`);
       await new Promise((res) => setTimeout(res, delayMs));
     }
   }
@@ -181,7 +169,6 @@ async function initDb() {
     await adminQuery(createTableSql);
     console.log('Users table ready');
 
-    // Seed default users (only if not present)
     const seeds = [
       { email: 'admin@admin.com', password: '111', user_type: 'admin' },
       { email: 'teacher@teacher.com', password: '123', user_type: 'teacher' },
@@ -202,107 +189,179 @@ async function initDb() {
   }
 }
 
-// Sign up endpoint (hashes password before storing)
-app.post('/register', async (req, res) => {
-  const { email, password, user_type } = req.body;
-  if (!email || !password || !user_type) {
-    return res.status(400).json({ success: false, message: 'Missing required fields.' });
-  }
+// Route handlers
+const routes = {
+  '/health': async (req, res) => {
+    try {
+      await query('SELECT 1');
+      sendJson(res, 200, {
+        status: 'healthy',
+        database: 'connected',
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      sendJson(res, 503, {
+        status: 'unhealthy',
+        database: 'disconnected',
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  },
 
-  try {
-    const existing = await query('SELECT email FROM users WHERE email = ?', [email]);
-    if (existing.length > 0) {
-      return res.status(409).json({ success: false, message: 'Email already registered.' });
+  '/register': async (req, res) => {
+    if (req.method !== 'POST') {
+      return sendJson(res, 405, { success: false, message: 'Method not allowed' });
     }
 
-    const hash = await bcrypt.hash(password, 12);
-    await query('INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)', [email, hash, user_type]);
-    res.json({ success: true, message: 'Registration successful!' });
-  } catch (err) {
-    console.error('Register error', err);
-    return res.status(500).json({ success: false, message: 'Database error.' });
-  }
-});
+    try {
+      const { email, password, user_type } = await parseBody(req);
+      
+      if (!email || !password || !user_type) {
+        return sendJson(res, 400, { success: false, message: 'Missing required fields.' });
+      }
 
-// Log in endpoint (verifies password hash)
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ success: false, message: 'Missing email or password.' });
-  }
+      const existing = await query('SELECT email FROM users WHERE email = ?', [email]);
+      if (existing.length > 0) {
+        return sendJson(res, 409, { success: false, message: 'Email already registered.' });
+      }
 
-  try {
-    const rows = await query('SELECT email, user_type, password, api_token_uses FROM users WHERE email = ?', [email]);
-    if (rows.length === 0) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+      const hash = await bcrypt.hash(password, 12);
+      await query('INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)', [email, hash, user_type]);
+      sendJson(res, 200, { success: true, message: 'Registration successful!' });
+    } catch (err) {
+      console.error('Register error', err);
+      sendJson(res, 500, { success: false, message: 'Database error.' });
+    }
+  },
+
+  '/login': async (req, res) => {
+    if (req.method !== 'POST') {
+      return sendJson(res, 405, { success: false, message: 'Method not allowed' });
     }
 
-    const row = rows[0];
-    const match = await bcrypt.compare(password, row.password);
-    if (!match) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    try {
+      const { email, password } = await parseBody(req);
+      
+      if (!email || !password) {
+        return sendJson(res, 400, { success: false, message: 'Missing email or password.' });
+      }
+
+      const rows = await query('SELECT email, user_type, password, api_token_uses FROM users WHERE email = ?', [email]);
+      if (rows.length === 0) {
+        return sendJson(res, 401, { success: false, message: 'Invalid email or password.' });
+      }
+
+      const row = rows[0];
+      const match = await bcrypt.compare(password, row.password);
+      if (!match) {
+        return sendJson(res, 401, { success: false, message: 'Invalid email or password.' });
+      }
+
+      sendJson(res, 200, { success: true, role: row.user_type, api_token: row.api_token_uses });
+    } catch (err) {
+      console.error('Login error', err);
+      sendJson(res, 500, { success: false, message: 'Database error.' });
+    }
+  },
+
+  '/admin/all-users': async (req, res) => {
+    if (req.method !== 'GET') {
+      return sendJson(res, 405, { success: false, message: 'Method not allowed' });
     }
 
-    // Return role and token count
-    res.json({ success: true, role: row.user_type, api_token: row.api_token_uses });
-  } catch (err) {
-    console.error('Login error', err);
-    return res.status(500).json({ success: false, message: 'Database error.' });
+    try {
+      const users = await query('SELECT email, user_type, api_token_uses FROM users', []);
+      sendJson(res, 200, { success: true, users });
+    } catch (err) {
+      console.error('Get all users error', err);
+      sendJson(res, 500, { success: false, message: 'Database error.' });
+    }
   }
-});
+};
 
-// Get all users endpoint (for admin)
-app.get('/admin/all-users', async (req, res) => {
-  try {
-    const users = await query('SELECT email, user_type, api_token_uses FROM users', []);
-    
-    res.json({ success: true, users });
-  } catch (err) {
-    console.error('Get all users error', err);
-    return res.status(500).json({ success: false, message: 'Database error.' });
+// Create HTTP server
+const server = http.createServer(async (req, res) => {
+  const parsedUrl = url.parse(req.url, true);
+  const pathname = parsedUrl.pathname;
+  const origin = req.headers.origin;
+
+  // Log request
+  console.log(`[${new Date().toISOString()}] ${req.method} ${pathname} - Origin: ${origin || 'none'}`);
+
+  // Set CORS headers
+  const allowed = setCorsHeaders(res, origin);
+  if (!allowed && origin) {
+    console.warn(`CORS: Origin ${origin} - BLOCKED`);
+    return sendJson(res, 403, { success: false, message: 'CORS policy: Origin not allowed' });
   }
-});
 
-// Global error handler for unhandled errors
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ 
-    success: false, 
-    message: err.message || 'Internal server error',
-    timestamp: new Date().toISOString()
-  });
-});
+  // Handle OPTIONS preflight
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 200;
+    res.end();
+    return;
+  }
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'Endpoint not found',
-    path: req.path,
-    method: req.method
-  });
+  // Route to handler
+  const handler = routes[pathname];
+  if (handler) {
+    try {
+      await handler(req, res);
+    } catch (err) {
+      console.error('Handler error:', err);
+      sendJson(res, 500, { success: false, message: 'Internal server error', timestamp: new Date().toISOString() });
+    }
+  } else {
+    sendJson(res, 404, { success: false, message: 'Endpoint not found', path: pathname, method: req.method });
+  }
 });
 
 const PORT = process.env.PORT || 8000;
-const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for deployment
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Initialize DB then start server
 async function startServer() {
+  console.log('\n=== Backend Auth Service Starting ===');
+  console.log(`Node version: ${process.version}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Port: ${PORT}`);
+  console.log(`Host: ${HOST}`);
+  console.log('\n--- Database Configuration ---');
+  console.log(`DB_HOST: ${process.env.DB_HOST || 'localhost (default)'}`);
+  console.log(`DB_PORT: ${process.env.DB_PORT || '3306 (default)'}`);
+  console.log(`DB_USER: ${process.env.DB_USER || 'backend_admin (default)'}`);
+  console.log(`DB_PASSWORD: ${process.env.DB_PASSWORD ? '***SET***' : 'NOT SET (using default)'}`);
+  console.log(`DB_NAME: ${process.env.DB_NAME || 'auth_db (default)'}`);
+  console.log(`CORS_ORIGINS: ${process.env.CORS_ORIGINS || 'NOT SET (development mode)'}`);
+  
   try {
-    // First create admin pool and initialize database
+    console.log('\n--- Step 1: Creating admin database pool ---');
     await createAdminPool();
+    
+    console.log('\n--- Step 2: Initializing database schema ---');
     await initDb();
     
-    // Then create client pool for runtime queries
+    console.log('\n--- Step 3: Creating client database pool ---');
     await createClientPool();
     
-    // Start server - bind to 0.0.0.0 for deployment platforms
-    app.listen(PORT, HOST, () => {
-      console.log(`User microservice running on http://${HOST}:${PORT}`);
-      console.log(`Allowed CORS origins: ${corsOrigins.join(', ')}`);
+    console.log('\n--- Step 4: Starting HTTP server ---');
+    server.listen(PORT, HOST, () => {
+      console.log(`\n✅ Server successfully started!`);
+      console.log(`🚀 User microservice running on http://${HOST}:${PORT}`);
+      console.log(`📡 Health check: http://${HOST}:${PORT}/health`);
+      console.log(`🌐 CORS origins: ${corsOrigins.join(', ')}`);
+      console.log('\n=== Ready to accept requests ===\n');
     });
   } catch (err) {
-    console.error('Failed to initialize, exiting.', err);
+    console.error('\n❌ FATAL ERROR - Failed to start server');
+    console.error('Error details:', err.message);
+    console.error('Stack trace:', err.stack);
+    console.error('\nCommon causes:');
+    console.error('1. Database connection refused - check DB_HOST, DB_USER, DB_PASSWORD');
+    console.error('2. Database not accessible - verify MySQL service is running');
+    console.error('3. Wrong credentials - verify environment variables in Railway');
+    console.error('\nExiting...');
     process.exit(1);
   }
 }
