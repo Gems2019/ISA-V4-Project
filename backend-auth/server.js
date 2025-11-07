@@ -23,8 +23,9 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
-// Explicitly handle preflight for all routes
-app.options('*', cors(corsOptions));
+// Explicitly handle preflight for all routes. Use '/*' instead of '*' so
+// path-to-regexp (used by Express) can parse the route without error.
+app.options('/*', cors(corsOptions));
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
