@@ -31,20 +31,19 @@ function isOriginAllowed(origin) {
 function setCorsHeaders(res, origin) {
   const allowed = isOriginAllowed(origin);
   
-  if (allowed) {
-    // If there's an origin, echo it back; otherwise use wildcard
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Vary', 'Origin');
-    } else {
-      // No origin header (Postman, curl, etc.)
-      res.setHeader('Access-Control-Allow-Origin', '*');
-    }
-    
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // ALWAYS set CORS headers, even for blocked requests
+  // This is required for browsers to properly handle the response
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Vary', 'Origin');
+  } else {
+    // No origin header (Postman, curl, etc.)
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
   return allowed;
 }
@@ -305,8 +304,17 @@ const server = http.createServer(async (req, res) => {
   // Log request
   console.log(`[${new Date().toISOString()}] ${req.method} ${pathname} - Origin: ${origin || 'none'}`);
 
-  // Set CORS headers
+  // Set CORS headers for ALL requests (including preflight)
   const allowed = setCorsHeaders(res, origin);
+
+  // Handle OPTIONS preflight - respond immediately with 200
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 200;
+    res.end();
+    return;
+  }
+
+  // Now check if origin is allowed for actual requests
   if (!allowed) {
     console.warn(`❌ CORS BLOCKED - Origin: ${origin || 'none'} | Allowed: ${corsOrigins.join(', ')}`);
     return sendJson(res, 403, { 
@@ -321,13 +329,6 @@ const server = http.createServer(async (req, res) => {
     console.log(`✅ CORS allowed - Origin: ${origin}`);
   } else {
     console.log(`✅ No-origin request allowed (Postman/curl/server)`);
-  }
-
-  // Handle OPTIONS preflight
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 200;
-    res.end();
-    return;
   }
 
   // Route to handler
