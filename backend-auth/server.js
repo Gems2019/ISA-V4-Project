@@ -73,9 +73,9 @@ let clientPool; // Used for runtime API queries
 async function createAdminPool() {
   try {
     adminPool = mysql.createPool(adminDbConfig);
-    const connection = await adminPool.getConnection();
+    // Wait for connection with retries (handles transient DB startup on hosted platforms)
+    await waitForConnection(adminPool);
     console.log('Successfully connected to MySQL database as admin');
-    connection.release();
     return adminPool;
   } catch (err) {
     console.error('Failed to connect to MySQL database as admin:', err);
@@ -87,13 +87,29 @@ async function createAdminPool() {
 async function createClientPool() {
   try {
     clientPool = mysql.createPool(clientDbConfig);
-    const connection = await clientPool.getConnection();
+    await waitForConnection(clientPool);
     console.log(`Successfully connected to MySQL database as ${clientDbConfig.user}`);
-    connection.release();
     return clientPool;
   } catch (err) {
     console.error('Failed to connect to MySQL database as client:', err);
     throw err;
+  }
+}
+
+// Helper: wait for a pool to accept connections with retries/backoff
+async function waitForConnection(pool, attempts = 8, delayMs = 2000) {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      const conn = await pool.getConnection();
+      conn.release();
+      return;
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      console.warn(`DB connection attempt ${i} failed: ${msg}`);
+      if (i === attempts) throw err;
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((res) => setTimeout(res, delayMs));
+    }
   }
 }
 
