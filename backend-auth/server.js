@@ -29,10 +29,8 @@ function isOriginAllowed(origin) {
 
 // Helper: Set CORS headers
 function setCorsHeaders(res, origin) {
-  const allowed = isOriginAllowed(origin);
-  
-  // ALWAYS set CORS headers, even for blocked requests
-  // This is required for browsers to properly handle the response
+  // ALWAYS set CORS headers for ALL responses
+  // This is critical for browsers to read responses, even error responses
   if (origin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -44,8 +42,6 @@ function setCorsHeaders(res, origin) {
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
-  return allowed;
 }
 
 // Helper: Parse JSON body
@@ -304,17 +300,19 @@ const server = http.createServer(async (req, res) => {
   // Log request
   console.log(`[${new Date().toISOString()}] ${req.method} ${pathname} - Origin: ${origin || 'none'}`);
 
-  // Set CORS headers for ALL requests (including preflight)
-  const allowed = setCorsHeaders(res, origin);
+  // ALWAYS set CORS headers for ALL requests
+  setCorsHeaders(res, origin);
 
-  // Handle OPTIONS preflight - respond immediately with 200
+  // Handle OPTIONS preflight - ALWAYS return 200, regardless of origin
+  // This is required by CORS spec - preflight must succeed
   if (req.method === 'OPTIONS') {
     res.statusCode = 200;
     res.end();
     return;
   }
 
-  // Now check if origin is allowed for actual requests
+  // NOW check if origin is allowed for actual requests (POST, GET, etc.)
+  const allowed = isOriginAllowed(origin);
   if (!allowed) {
     console.warn(`❌ CORS BLOCKED - Origin: ${origin || 'none'} | Allowed: ${corsOrigins.join(', ')}`);
     return sendJson(res, 403, { 
