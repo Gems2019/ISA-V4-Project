@@ -9,28 +9,43 @@ const corsOrigins = [
   'http://localhost:8000',
 ];
 if (process.env.CORS_ORIGINS) {
-  const additionalOrigins = process.env.CORS_ORIGINS.split(',').map(origin => origin.trim());
+  const additionalOrigins = process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(o => o);
   corsOrigins.push(...additionalOrigins);
 }
 
 // Helper: Check if origin is allowed
 function isOriginAllowed(origin) {
+  // Allow requests with no origin (like Postman, curl, server-to-server)
   if (!origin) return true;
+  
+  // Check if origin is in whitelist
   if (corsOrigins.includes(origin)) return true;
+  
+  // In development (no CORS_ORIGINS set), allow all origins
   if (!process.env.CORS_ORIGINS) return true;
+  
   return false;
 }
 
 // Helper: Set CORS headers
 function setCorsHeaders(res, origin) {
   const allowed = isOriginAllowed(origin);
+  
   if (allowed) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    // If there's an origin, echo it back; otherwise use wildcard
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Vary', 'Origin');
+    } else {
+      // No origin header (Postman, curl, etc.)
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-	  res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   }
+  
   return allowed;
 }
 
@@ -292,9 +307,20 @@ const server = http.createServer(async (req, res) => {
 
   // Set CORS headers
   const allowed = setCorsHeaders(res, origin);
-  if (!allowed && origin) {
-    console.warn(`CORS: Origin ${origin} - BLOCKED`);
-    return sendJson(res, 403, { success: false, message: 'CORS policy: Origin not allowed' });
+  if (!allowed) {
+    console.warn(`❌ CORS BLOCKED - Origin: ${origin || 'none'} | Allowed: ${corsOrigins.join(', ')}`);
+    return sendJson(res, 403, { 
+      success: false, 
+      message: 'CORS policy: Origin not allowed',
+      origin: origin,
+      allowedOrigins: corsOrigins
+    });
+  }
+  
+  if (origin) {
+    console.log(`✅ CORS allowed - Origin: ${origin}`);
+  } else {
+    console.log(`✅ No-origin request allowed (Postman/curl/server)`);
   }
 
   // Handle OPTIONS preflight
@@ -351,7 +377,10 @@ async function startServer() {
       console.log(`\n✅ Server successfully started!`);
       console.log(`🚀 User microservice running on http://${HOST}:${PORT}`);
       console.log(`📡 Health check: http://${HOST}:${PORT}/health`);
-      console.log(`🌐 CORS origins: ${corsOrigins.join(', ')}`);
+      console.log(`\n🌐 CORS Configuration:`);
+      console.log(`   Mode: ${process.env.CORS_ORIGINS ? 'PRODUCTION (whitelist)' : 'DEVELOPMENT (permissive)'}`);
+      console.log(`   Allowed origins: ${corsOrigins.join(', ')}`);
+      console.log(`   No-origin requests (Postman/curl): ALLOWED`);
       console.log('\n=== Ready to accept requests ===\n');
     });
   } catch (err) {
