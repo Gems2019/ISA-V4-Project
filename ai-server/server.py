@@ -1,4 +1,5 @@
 from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 import torch
 import soundfile as sf
@@ -61,6 +62,19 @@ def create_app() -> FastAPI:
         yield
 
     app = FastAPI(title=APP_TITLE, lifespan=lifespan)
+
+    # Configure simple CORS (single origin) via environment variable
+    # Set CORS_ALLOWED_ORIGIN to a single origin (e.g. http://localhost:3000)
+    cors_origin = os.environ.get("CORS_ALLOWED_ORIGIN")
+    if cors_origin:
+        print(f"Configuring CORS to allow origin: {cors_origin}")
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=[cors_origin],
+            allow_credentials=True,
+            allow_methods=["POST", "OPTIONS"],
+            allow_headers=["*"],
+        )
 
     @app.get(ROOT_PATH)
     async def root():
