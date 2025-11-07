@@ -25,7 +25,6 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
-app.options('/*', cors(corsOptions));
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
