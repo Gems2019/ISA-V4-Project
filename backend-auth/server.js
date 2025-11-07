@@ -7,12 +7,15 @@ const app = express();
 app.use(express.json());
 
 // Configure CORS with specific allowed origins
+const corsOrigins = [
+  'http://localhost:5173', // Local Vite dev server
+  'http://localhost:8000', // Alternative local dev port
+];
+if (process.env.CORS_ORIGINS) {
+  corsOrigins.push(process.env.CORS_ORIGINS); // Adds Azure Static Web Apps frontend if it is an environmental variable
+}
 const corsOptions = {
-  origin: [
-    'http://localhost:5173', // Local Vite dev server
-    'http://localhost:8000', // Alternative local dev port
-    'https://salmon-tree-0e98fe510.3.azurestaticapps.net' // Azure Static Web Apps frontend
-  ],
+  origin: corsOrigins,
   credentials: true, // Allow cookies and authentication headers
   optionsSuccessStatus: 200
 };
