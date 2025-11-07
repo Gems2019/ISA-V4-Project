@@ -12,14 +12,20 @@ const corsOrigins = [
   'http://localhost:8000', // Alternative local dev port
 ];
 if (process.env.CORS_ORIGINS) {
-  corsOrigins.push(process.env.CORS_ORIGINS); // Adds Azure Static Web Apps frontend if it is an environmental variable
+  corsOrigins.push(process.env.CORS_ORIGINS); // Adds frontend endpoint if it is an environment variable
 }
 const corsOptions = {
-  origin: corsOrigins,
+  origin: (origin, callback) => {
+    // allow non-browser requests like curl or same-origin (no origin)
+    if (!origin) return callback(null, true);
+    if (corsOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('CORS policy: Origin not allowed'));
+  },
   credentials: true, // Allow cookies and authentication headers
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
