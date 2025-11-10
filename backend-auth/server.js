@@ -2,6 +2,8 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -18,8 +20,46 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Connect to SQLite DB
-const db = new sqlite3.Database('users.db');
+// Connect to SQLite DB (path configurable via DB_PATH env var — e.g. Railway volume)
+let DB_PATH = process.env.DB_PATH || 'users.db';
+
+// If DB_PATH points at an existing directory, or ends with a path separator,
+// assume user meant a directory and use a filename inside it.
+try {
+  if (DB_PATH.endsWith(path.sep) || (fs.existsSync(DB_PATH) && fs.statSync(DB_PATH).isDirectory())) {
+    DB_PATH = path.join(DB_PATH, 'users.db');
+  }
+} catch (err) {
+  // If stat fails, we'll handle when trying to create directory/file below
+}
+
+// Ensure parent directory exists when DB_PATH specifies a directory
+const dbDir = path.dirname(DB_PATH);
+if (dbDir && dbDir !== '.') {
+  try {
+    fs.mkdirSync(dbDir, { recursive: true });
+  } catch (err) {
+    console.error('Failed to create DB directory', dbDir, err);
+  }
+}
+
+// Check that parent directory is writable
+try {
+  fs.accessSync(dbDir || '.', fs.constants.W_OK);
+} catch (err) {
+  console.error(`DB directory is not writable: ${dbDir || '.'}. Set DB_PATH to a writable location or adjust permissions.`);
+  throw err;
+}
+
+const db = new sqlite3.Database(DB_PATH, (err) => {
+  if (err) {
+    console.error('Failed to open SQLite DB at', DB_PATH, err);
+    // rethrow so initDb catch handles exit
+    throw err;
+  }
+});
+
+console.log('Using SQLite DB at', DB_PATH);
 
 // Promisified helpers for sqlite3
 function dbRun(sql, params = []) {
@@ -51,8 +91,8 @@ async function initDb() {
   )`;
 
   try {
-    await dbRun(createTableSql);
-    console.log('Users table ready (users.db)');
+  await dbRun(createTableSql);
+  console.log('Users table ready at', DB_PATH);
 
     // Seed default users (only if not present)
     const seeds = [
