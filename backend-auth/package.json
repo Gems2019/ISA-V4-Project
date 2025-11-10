@@ -1,9 +1,16 @@
 {
+  "name": "backend-auth",
+  "version": "1.0.0",
+  "description": "Authentication microservice with MySQL",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
   "dependencies": {
     "cors": "^2.8.5",
-    "crypto": "^1.0.1",
     "express": "^5.1.0",
-    "sqlite3": "^5.1.7",
+    "mysql2": "^3.6.5",
     "bcrypt": "^5.1.0"
   }
 }
