@@ -18,7 +18,7 @@ CREATE USER IF NOT EXISTS 'frontend_client'@'%' IDENTIFIED BY 'secure_password_h
 
 -- Grant only SELECT and INSERT on the users table
 -- Replace 'railway' with your actual database name if different
-GRANT SELECT, INSERT ON railway.users TO 'frontend_client'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE ON railway.users TO 'frontend_client'@'%';
 
 -- Apply changes
 FLUSH PRIVILEGES;
