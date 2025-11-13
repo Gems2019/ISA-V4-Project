@@ -27,7 +27,7 @@ class RoomServer {
     this.MAX_AUDIO_BYTES = process.env.MAX_AUDIO_BYTES ? parseInt(process.env.MAX_AUDIO_BYTES, 10) : 524288; // 512 KiB
     console.log(`Using MAX_AUDIO_BYTES=${this.MAX_AUDIO_BYTES}`);
     this.upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: this.MAX_AUDIO_BYTES } });
-    this.aiServerEndpoint = process.env.AI_SERVER_ENDPOINT || 'http://localhost:8000/transcribe';
+    this.aiServerEndpoint = process.env.AI_SERVER_ENDPOINT || 'http://localhost:8080/transcribe';
 
     // Configure middleware
     this.setupMiddleware();
