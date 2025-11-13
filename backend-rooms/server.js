@@ -8,6 +8,8 @@ const FormData = require('form-data');
 
 class RoomServer {
   constructor() {
+    this.ENDPOINT = '/API/v1';
+
     // Initialize Express app and HTTP server
     this.app = express();
     this.server = http.createServer(this.app);
@@ -89,7 +91,7 @@ class RoomServer {
 
   setupRoutes() {
     // Create room endpoint
-    this.app.get('/create-room', (req, res) => {
+    this.app.get(`${this.ENDPOINT}/create-room`, (req, res) => {
       const roomCode = this.generateRoomCode();
       this.rooms.set(roomCode, {
         createdAt: new Date(),
@@ -108,7 +110,7 @@ class RoomServer {
     });
 
     // Join room endpoint
-    this.app.get('/join-room', (req, res) => {
+    this.app.get(`${this.ENDPOINT}/join-room`, (req, res) => {
       const roomCode = req.query.room;
 
       if (!roomCode || !this.rooms.has(roomCode)) {
@@ -128,7 +130,7 @@ class RoomServer {
     });
 
     // Process audio endpoint
-    this.app.post('/process-audio', this.upload.single('audio_file'), async (req, res) => {
+    this.app.post(`${this.ENDPOINT}/process-audio`, this.upload.single('audio_file'), async (req, res) => {
       const { room } = req.body;
 
       if (!room || !this.rooms.has(room)) {
