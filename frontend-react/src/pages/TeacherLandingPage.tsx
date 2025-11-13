@@ -1,11 +1,16 @@
 // src/pages/TeacherLandingPage.tsx
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthTokenRole';
+import { useNavigate } from 'react-router-dom';
 import messages from '../config/messages.json';
+import Config from '../config';
 
 const TeacherLandingPage = () => {
   const { logout } = useAuth();
+  const navigate = useNavigate();
   const [tokenCount, setTokenCount] = useState<number>(20);
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [error, setError] = useState<string>('');
   const initialTokens = 20;
 
   // Deduct 1 token when landing page loads (frontend only)
@@ -25,6 +30,33 @@ const TeacherLandingPage = () => {
   }, []);
 
   const usedTokens = initialTokens - tokenCount;
+
+  const handleCreateRoom = async () => {
+    setIsCreatingRoom(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${Config.ROOMS_BASE_URL}/create-room`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create room');
+      }
+
+      const data = await response.json();
+      const roomCode = data.room_code;
+      const wsUrl = data.ws_url;
+
+      // Navigate to teacher room page with WebSocket URL
+      navigate(`/teacher/room/${roomCode}`, { state: { wsUrl } });
+    } catch (err) {
+      console.error('Error creating room:', err);
+      setError('Failed to create room. Please try again.');
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  };
 
   return (
     <div>
@@ -56,7 +88,14 @@ const TeacherLandingPage = () => {
 
       <p>{messages.teacher.comingSoon}</p>
 
-      <button>{messages.teacher.createRoomButton}</button>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+
+      <button 
+        onClick={handleCreateRoom}
+        disabled={isCreatingRoom}
+      >
+        {isCreatingRoom ? 'Creating Room...' : messages.teacher.createRoomButton}
+      </button>
       <button onClick={logout}>{messages.teacher.logoutButton}</button>
     </div>
   );
