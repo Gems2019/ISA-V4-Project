@@ -5,6 +5,8 @@ import AdminLandingPage from "../pages/AdminLandingPage";
 import RegisterPage from "../pages/RegisterPage";
 import StudentLandingPage from "../pages/StudentLandingPage";
 import TeacherLandingPage from "../pages/TeacherLandingPage";
+import TeacherRoomPage from "../pages/TeacherRoomPage";
+import StudentRoomPage from "../pages/StudentRoomPage";
 // Temporarily disabled for development
 import { UserCheck } from "../components/UserCheck";
 
@@ -43,6 +45,10 @@ export const router = createBrowserRouter([
           {
             path: "/student",
             element: <StudentLandingPage />
+          },
+          {
+            path: "/student/room/:roomCode",
+            element: <StudentRoomPage />
           }
         ],
       },
@@ -58,6 +64,10 @@ export const router = createBrowserRouter([
           {
             path: "/teacher",
             element: <TeacherLandingPage />
+          },
+          {
+            path: "/teacher/room/:roomCode",
+            element: <TeacherRoomPage />
           }
         ],
       },
