@@ -313,13 +313,9 @@ const TeacherRoomPage = () => {
         {transcriptions.length === 0 ? (
           <p style={{ color: '#666' }}>No transcriptions yet. Start recording to begin.</p>
         ) : (
-          <div>
-            {transcriptions.map((text, index) => (
-              <p key={index} style={{ marginBottom: '10px', lineHeight: '1.5' }}>
-                <strong>[{index + 1}]</strong> {text}
-              </p>
-            ))}
-          </div>
+          <p style={{ lineHeight: '1.5' }}>
+            {transcriptions.join(' ')}
+          </p>
         )}
       </div>
     </div>
