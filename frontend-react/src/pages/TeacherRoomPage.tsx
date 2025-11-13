@@ -95,8 +95,8 @@ const TeacherRoomPage = () => {
       mediaRecorder.onstop = async () => {
         if (audioChunksRef.current.length > 0) {
           await sendAudioChunk();
+          audioChunksRef.current = [];
         }
-        audioChunksRef.current = [];
       };
 
       // Start recording
@@ -107,9 +107,9 @@ const TeacherRoomPage = () => {
       // Send audio chunk every 5 seconds
       recordingIntervalRef.current = setInterval(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          // Stop and restart to trigger ondataavailable
+          // Stop to trigger ondataavailable and send
           mediaRecorderRef.current.stop();
-          audioChunksRef.current = [];
+          // Restart recording
           mediaRecorderRef.current.start();
         }
       }, 5000);
