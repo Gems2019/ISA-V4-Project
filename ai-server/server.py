@@ -15,7 +15,7 @@ APP_TITLE = "Speech Transcription API"
 ROOT_PATH = "/"
 TRANSCRIBE_PATH = "/transcribe"
 HOST = "0.0.0.0"
-DEFAULT_PORT = 8000
+DEFAULT_PORT = 8080
 
 # Generation parameters
 LANGUAGE = "en"
