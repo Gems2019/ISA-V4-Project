@@ -34,7 +34,7 @@ const StudentLandingPage = () => {
 
   const handleJoinRoom = async () => {
     if (!roomCode.trim()) {
-      setError('Please enter a room code');
+      setError(messages.student.errorEnterRoomCode);
       return;
     }
 
@@ -57,7 +57,7 @@ const StudentLandingPage = () => {
       navigate(`/student/room/${data.room_code}`, { state: { wsUrl } });
     } catch (err) {
       console.error('Error joining room:', err);
-      setError('Failed to join room. Please check the room code and try again.');
+      setError(messages.student.errorJoinRoom);
     } finally {
       setIsJoiningRoom(false);
     }
@@ -98,7 +98,7 @@ const StudentLandingPage = () => {
       <div style={{ marginBottom: '10px' }}>
         <input
           type="text"
-          placeholder="Enter room code"
+          placeholder={messages.student.roomCodePlaceholder}
           value={roomCode}
           onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
           style={{ 
@@ -112,7 +112,7 @@ const StudentLandingPage = () => {
           onClick={handleJoinRoom}
           disabled={isJoiningRoom || !roomCode.trim()}
         >
-          {isJoiningRoom ? 'Joining...' : messages.student.joinRoomButton}
+          {isJoiningRoom ? messages.student.joiningText : messages.student.joinRoomButton}
         </button>
       </div>
 

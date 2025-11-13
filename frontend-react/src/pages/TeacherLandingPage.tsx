@@ -52,7 +52,7 @@ const TeacherLandingPage = () => {
       navigate(`/teacher/room/${roomCode}`, { state: { wsUrl } });
     } catch (err) {
       console.error('Error creating room:', err);
-      setError('Failed to create room. Please try again.');
+      setError(messages.teacher.errorCreateRoom);
     } finally {
       setIsCreatingRoom(false);
     }
@@ -94,7 +94,7 @@ const TeacherLandingPage = () => {
         onClick={handleCreateRoom}
         disabled={isCreatingRoom}
       >
-        {isCreatingRoom ? 'Creating Room...' : messages.teacher.createRoomButton}
+        {isCreatingRoom ? messages.teacher.creatingRoomText : messages.teacher.createRoomButton}
       </button>
       <button onClick={logout}>{messages.teacher.logoutButton}</button>
     </div>

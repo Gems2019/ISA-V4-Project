@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import messages from '../config/messages.json';
 
 const StudentRoomPage = () => {
   const { roomCode } = useParams<{ roomCode: string }>();
@@ -18,7 +19,7 @@ const StudentRoomPage = () => {
     // Use WebSocket URL from backend response
     const wsUrl = (location.state as { wsUrl?: string })?.wsUrl;
     if (!wsUrl) {
-      setError('WebSocket URL not provided');
+      setError(messages.student.errorWebSocketUrl);
       return;
     }
 
@@ -43,7 +44,7 @@ const StudentRoomPage = () => {
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setError('WebSocket connection error');
+      setError(messages.student.errorWebSocketConnection);
       setWsConnected(false);
     };
 
@@ -65,15 +66,15 @@ const StudentRoomPage = () => {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h2>Student Room: {roomCode}</h2>
+      <h2>{messages.student.roomTitle} {roomCode}</h2>
       
       <div style={{ marginBottom: '20px' }}>
         <p>
-          <strong>Status:</strong>{' '}
+          <strong>{messages.student.statusLabel}</strong>{' '}
           {wsConnected ? (
-            <span style={{ color: 'green' }}>Connected</span>
+            <span style={{ color: 'green' }}>{messages.student.statusConnected}</span>
           ) : (
-            <span style={{ color: 'red' }}>Disconnected</span>
+            <span style={{ color: 'red' }}>{messages.student.statusDisconnected}</span>
           )}
         </p>
         {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -92,7 +93,7 @@ const StudentRoomPage = () => {
             cursor: 'pointer'
           }}
         >
-          Leave Room
+          {messages.student.leaveRoomButton}
         </button>
       </div>
 
@@ -105,9 +106,9 @@ const StudentRoomPage = () => {
         overflowY: 'auto',
         backgroundColor: '#f9f9f9'
       }}>
-        <h3>Transcriptions:</h3>
+        <h3>{messages.student.transcriptionsTitle}</h3>
         {transcriptions.length === 0 ? (
-          <p style={{ color: '#666' }}>Waiting for transcriptions...</p>
+          <p style={{ color: '#666' }}>{messages.student.waitingForTranscriptions}</p>
         ) : (
           <p style={{ lineHeight: '1.5' }}>
             {transcriptions.join(' ')}

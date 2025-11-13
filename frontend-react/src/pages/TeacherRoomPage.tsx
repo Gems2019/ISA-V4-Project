@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Config from '../config';
+import messages from '../config/messages.json';
 
 const TeacherRoomPage = () => {
   const { roomCode } = useParams<{ roomCode: string }>();
@@ -23,7 +24,7 @@ const TeacherRoomPage = () => {
     // Use WebSocket URL from backend response
     const wsUrl = (location.state as { wsUrl?: string })?.wsUrl;
     if (!wsUrl) {
-      setError('WebSocket URL not provided');
+      setError(messages.teacher.errorWebSocketUrl);
       return;
     }
 
@@ -48,7 +49,7 @@ const TeacherRoomPage = () => {
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setError('WebSocket connection error');
+      setError(messages.teacher.errorWebSocketConnection);
       setWsConnected(false);
     };
 
@@ -115,7 +116,7 @@ const TeacherRoomPage = () => {
 
     } catch (err) {
       console.error('Error accessing microphone:', err);
-      setError('Failed to access microphone. Please check permissions.');
+      setError(messages.teacher.errorMicrophoneAccess);
     }
   };
 
@@ -215,7 +216,7 @@ const TeacherRoomPage = () => {
       }
     } catch (err) {
       console.error('Error sending audio:', err);
-      setError('Failed to send audio chunk');
+      setError(messages.teacher.errorSendAudio);
     }
   };
 
@@ -236,15 +237,15 @@ const TeacherRoomPage = () => {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h2>Teacher Room: {roomCode}</h2>
+      <h2>{messages.teacher.roomTitle} {roomCode}</h2>
       
       <div style={{ marginBottom: '20px' }}>
         <p>
-          <strong>Status:</strong>{' '}
+          <strong>{messages.teacher.statusLabel}</strong>{' '}
           {wsConnected ? (
-            <span style={{ color: 'green' }}>Connected</span>
+            <span style={{ color: 'green' }}>{messages.teacher.statusConnected}</span>
           ) : (
-            <span style={{ color: 'red' }}>Disconnected</span>
+            <span style={{ color: 'red' }}>{messages.teacher.statusDisconnected}</span>
           )}
         </p>
         {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -264,7 +265,7 @@ const TeacherRoomPage = () => {
               cursor: 'pointer'
             }}
           >
-            Start Recording
+            {messages.teacher.startRecordingButton}
           </button>
         ) : (
           <button 
@@ -279,7 +280,7 @@ const TeacherRoomPage = () => {
               cursor: 'pointer'
             }}
           >
-            Stop Recording
+            {messages.teacher.stopRecordingButton}
           </button>
         )}
         
@@ -296,7 +297,7 @@ const TeacherRoomPage = () => {
             cursor: 'pointer'
           }}
         >
-          Leave Room
+          {messages.teacher.leaveRoomButton}
         </button>
       </div>
 
@@ -309,9 +310,9 @@ const TeacherRoomPage = () => {
         overflowY: 'auto',
         backgroundColor: '#f9f9f9'
       }}>
-        <h3>Transcriptions:</h3>
+        <h3>{messages.teacher.transcriptionsTitle}</h3>
         {transcriptions.length === 0 ? (
-          <p style={{ color: '#666' }}>No transcriptions yet. Start recording to begin.</p>
+          <p style={{ color: '#666' }}>{messages.teacher.noTranscriptions}</p>
         ) : (
           <p style={{ lineHeight: '1.5' }}>
             {transcriptions.join(' ')}
