@@ -47,7 +47,8 @@ class RoomServer {
 
     const corsOrigins = [
       'http://localhost:5173',
-      'http://localhost:8000'
+      'http://localhost:8000',
+      'https://salmon-tree-0e98fe510.3.azurestaticapps.net'
     ];
     if (process.env.CORS_ORIGINS) {
       const additionalOrigins = process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(o => o);
