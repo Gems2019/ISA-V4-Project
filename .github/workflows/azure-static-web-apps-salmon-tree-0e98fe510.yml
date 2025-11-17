@@ -34,6 +34,8 @@ jobs:
           ###### End of Repository/Build Configurations ######
         env:
           VITE_API_URL: "https://isa-v4-project-authentication-production.up.railway.app"
+          VITE_AUTH_BASE_URL: "https://isa-v4-project-authentication-production.up.railway.app"
+          VITE_ROOMS_BASE_URL: "https://isa-v4-project-production.up.railway.app/API/v1"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -47,5 +49,6 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_TREE_0E98FE510 }}
           action: "close"
        
+
 
 
