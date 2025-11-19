@@ -1,3 +1,4 @@
+// require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
@@ -568,6 +569,103 @@ app.get('/admin/all-users', async (req, res) => {
     res.json({ success: true, users });
   } catch (err) {
     console.error('Get all users error', err);
+    res.status(500).json({ success: false, message: 'Database error.' });
+  }
+});
+
+/**
+ * @swagger
+ * /use-token:
+ *   put:
+ *     summary: Decrement API token for a user
+ *     description: Decrements api_token_uses for the given user and returns the new count
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: john@john.com
+ *     responses:
+ *       200:
+ *         description: Token decremented successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 api_token_uses:
+ *                   type: integer
+ *       400:
+ *         description: Missing email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Database error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
+app.put('/use-token', async (req, res) => {
+  const { email } = req.body;
+  
+  // If the email cannot be found...
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Missing email.' });
+  }
+
+  try {
+    // Get current token count
+    console.log('Reached the /use-token area')
+    const rows = await query('SELECT api_token_uses FROM users WHERE email = ?', [email]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    let currentTokens = rows[0].api_token_uses;
+
+    // if the tokens is less than or equal to 0, return the token count set to 0 and dont decrement further. 
+    if (currentTokens <= 0) {
+      return res.json({ success: true, api_token_uses: 0 });
+    }
+
+    // Decrement and update
+    const newTokens = currentTokens - 1;
+    await query('UPDATE users SET api_token_uses = ? WHERE email = ?', [newTokens, email]);
+    console.log(newTokens)
+    return res.json({ success: true, api_token_uses: newTokens });
+  } catch (err) {
+    console.error('Use token error', err);
     res.status(500).json({ success: false, message: 'Database error.' });
   }
 });
