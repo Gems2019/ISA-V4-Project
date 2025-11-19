@@ -77,25 +77,25 @@ const StudentLandingPage = () => {
     <div>
       <h2>{messages.student.welcomeTitle}</h2>
       
-      <h3>API Token Usage</h3>
+      <h3>{messages.student.apiTokenUsageTitle}</h3>
       <table border={1}>
         <thead>
           <tr>
-            <th>Description</th>
-            <th>Count</th>
+            <th>{messages.student.description}</th>
+            <th>{messages.student.count}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Initial API Tokens</td>
+            <td>{messages.student.initialApiTokens}</td>
             <td>{initialTokens}</td>
           </tr>
           <tr>
-            <td>Tokens Used</td>
+            <td>{messages.student.tokensUsed}</td>
             <td>{usedTokens}</td>
           </tr>
           <tr>
-            <td><strong>Tokens Remaining</strong></td>
+            <td><strong>{messages.student.tokensRemaining}</strong></td>
             <td><strong>{tokenCount}</strong></td>
           </tr>
         </tbody>

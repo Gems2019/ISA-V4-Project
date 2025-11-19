@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
+import messages from '../config/messages.json';
 
 type HomePageProps = {
   title?: string;
   subtitle?: string;
   children: ReactNode;
 };
-const HomePage = ({ title = "Title", subtitle = "Subtitle", children }: HomePageProps) => {
+const HomePage = ({ title = messages.home.defaultTitle, subtitle = messages.home.defaultSubtitle, children }: HomePageProps) => {
   return (
     <div>
       <h1>{title}</h1>

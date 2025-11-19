@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import messages from '../config/messages.json';
 
 interface User {
   email: string;
@@ -46,16 +47,15 @@ const AdminLandingPage: React.FC = () => {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h1>Admin Dashboard</h1>
-      <button onClick={handleLogout}>Logout</button>
+      <h1>{messages.admin.dashboardTitle}</h1>
+      <button onClick={handleLogout}>{messages.admin.logoutButton}</button>
 
-      <h2>Teachers</h2>
+      <h2>{messages.admin.teachersTitle}</h2>
       <table border={1} style={{ marginBottom: '20px' }}>
         <thead>
           <tr>
-            <th>Email</th>
-
-            <th>Tokens Remaining</th>
+            <th>{messages.admin.tableHeaderEmail}</th>
+            <th>{messages.admin.tableHeaderTokensRemaining}</th>
           </tr>
         </thead>
         <tbody>
@@ -68,12 +68,12 @@ const AdminLandingPage: React.FC = () => {
         </tbody>
       </table>
 
-      <h2>Students</h2>
+      <h2>{messages.admin.studentsTitle}</h2>
       <table border={1}>
         <thead>
           <tr>
-            <th>Email</th>
-            <th>Tokens Remaining</th>
+            <th>{messages.admin.tableHeaderEmail}</th>
+            <th>{messages.admin.tableHeaderTokensRemaining}</th>
           </tr>
         </thead>
         <tbody>

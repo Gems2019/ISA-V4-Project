@@ -235,8 +235,8 @@ const RegisterPage = () => {
               value={userType} 
               onChange={(e) => setUserType(e.target.value as 'student' | 'teacher')}
             >
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
+              <option value="student">{messages.register.userTypeStudent}</option>
+              <option value="teacher">{messages.register.userTypeTeacher}</option>
             </Select>
           </InputGroup>
 
