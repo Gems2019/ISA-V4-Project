@@ -1,5 +1,5 @@
 // src/pages/StudentLandingPage.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthTokenRole';
 import { useNavigate } from 'react-router-dom';
 import messages from '../config/messages.json';
@@ -8,27 +8,14 @@ import Config from '../config';
 const StudentLandingPage = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const [tokenCount, setTokenCount] = useState<number>(20);
+  const initialTokens = 20;
+  const [tokenCount, setTokenCount] = useState<number>(() => {
+    const stored = localStorage.getItem('api_token_uses');
+    return stored ? parseInt(stored, 10) : initialTokens;
+  });
   const [roomCode, setRoomCode] = useState<string>('');
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
   const [error, setError] = useState<string>('');
-  const initialTokens = 20;
-
-  // Deduct 1 token when landing page loads (frontend only)
-  useEffect(() => {
-    const storedTokens = localStorage.getItem('api_token_uses');
-    if (storedTokens) {
-      const currentTokens = parseInt(storedTokens);
-      // Deduct 1 token for accessing landing page
-      const newTokenCount = Math.max(0, currentTokens - 1);
-      setTokenCount(newTokenCount);
-      localStorage.setItem('api_token_uses', newTokenCount.toString());
-    } else {
-      // First time, set to 19 (20 - 1 for landing page access)
-      setTokenCount(19);
-      localStorage.setItem('api_token_uses', '19');
-    }
-  }, []);
 
   const usedTokens = initialTokens - tokenCount;
 
@@ -42,6 +29,29 @@ const StudentLandingPage = () => {
     setError('');
 
     try {
+      // Get email from localStorage
+      const email = localStorage.getItem('token');
+      if (!email) {
+        throw new Error('No token found');
+      }
+
+      // Query the use_token endpoint
+      const tokenResponse = await fetch(`${Config.AUTH_BASE_URL}/use-token?email=${encodeURIComponent(email)}`, {
+        method: 'GET',
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to use email');
+      }
+
+      const tokenData = await tokenResponse.json();
+      const newTokenCount = tokenData.remaining_tokens || 0;
+      
+      // Update localStorage with new token count
+      localStorage.setItem('api_token_uses', newTokenCount.toString());
+      setTokenCount(newTokenCount);
+
+      // Join room
       const response = await fetch(`${Config.ROOMS_BASE_URL}/join-room?room=${roomCode.trim()}`, {
         method: 'GET',
       });
@@ -90,8 +100,6 @@ const StudentLandingPage = () => {
           </tr>
         </tbody>
       </table>
-
-      <p>{messages.student.comingSoon}</p>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
