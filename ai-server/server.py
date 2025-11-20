@@ -1,3 +1,5 @@
+# GitHub Copilot used to assist in bugfixing
+
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
