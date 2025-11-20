@@ -647,7 +647,6 @@ app.put('/use-token', async (req, res) => {
 
   try {
     // Get current token count
-    console.log('Reached the /use-token area')
     const rows = await query('SELECT api_token_uses FROM users WHERE email = ?', [email]);
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found.' });
@@ -662,7 +661,6 @@ app.put('/use-token', async (req, res) => {
     // Decrement and update
     const newTokens = currentTokens - 1;
     await query('UPDATE users SET api_token_uses = ? WHERE email = ?', [newTokens, email]);
-    console.log(newTokens)
     return res.json({ success: true, api_token_uses: newTokens });
   } catch (err) {
     console.error('Use token error', err);
