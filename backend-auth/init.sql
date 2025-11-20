@@ -16,7 +16,7 @@ CREATE INDEX idx_user_type ON users(user_type);
 -- Create frontend-client user with limited permissions (SELECT and INSERT only)
 -- This user is for the frontend application
 CREATE USER IF NOT EXISTS 'frontend_client'@'%' IDENTIFIED BY 'frontend_password';
-GRANT SELECT, INSERT ON auth_db.users TO 'frontend_client'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth_db.users TO 'frontend_client'@'%';
 
 -- Grant full permissions to backend_admin (already created by docker-compose)
 GRANT ALL PRIVILEGES ON auth_db.* TO 'backend_admin'@'%';
