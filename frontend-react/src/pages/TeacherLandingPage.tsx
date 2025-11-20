@@ -30,8 +30,10 @@ const TeacherLandingPage = () => {
       }
 
       // Query the use_token endpoint
-      const tokenResponse = await fetch(`${Config.AUTH_BASE_URL}/use-token?email=${encodeURIComponent(email)}`, {
-        method: 'GET',
+      const tokenResponse = await fetch(`${Config.AUTH_BASE_URL}/use-token`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       });
 
       if (!tokenResponse.ok) {
@@ -39,7 +41,7 @@ const TeacherLandingPage = () => {
       }
 
       const tokenData = await tokenResponse.json();
-      const newTokenCount = tokenData.remaining_tokens || 0;
+      const newTokenCount = tokenData.api_token_uses || 0;
       
       // Update localStorage with new token count
       localStorage.setItem('api_token_uses', newTokenCount.toString());
