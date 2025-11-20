@@ -71,3 +71,5 @@ export default defineConfig([
   },
 ])
 ```
+
+GitHub Copilot used to assist in bugfixing
