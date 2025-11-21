@@ -15,6 +15,7 @@ const StudentLandingPage = () => {
   });
   const [roomCode, setRoomCode] = useState<string>('');
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [error, setError] = useState<string>('');
 
   const usedTokens = initialTokens - tokenCount;
@@ -75,6 +76,40 @@ const StudentLandingPage = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(messages.student.confirmDeleteAccount);
+    if (!confirmed) return;
+
+    setIsDeletingAccount(true);
+    setError('');
+
+    try {
+      const email = localStorage.getItem('token');
+      if (!email) {
+        throw new Error('No email found');
+      }
+
+      const response = await fetch(`${Config.AUTH_BASE_URL}/delete-account`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete account');
+      }
+
+      // Clear local storage and redirect to login
+      localStorage.clear();
+      navigate('/login');
+    } catch (err) {
+      console.error('Error deleting account:', err);
+      setError(messages.student.errorDeleteAccount);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   return (
     <div>
       <h2>{messages.student.welcomeTitle}</h2>
@@ -127,6 +162,13 @@ const StudentLandingPage = () => {
       </div>
 
       <button onClick={logout}>{messages.student.logoutButton}</button>
+      <button 
+        onClick={handleDeleteAccount}
+        disabled={isDeletingAccount}
+        style={{ backgroundColor: '#d32f2f', color: 'white', marginLeft: '10px' }}
+      >
+        {isDeletingAccount ? messages.student.deletingAccount : messages.student.deleteAccountButton}
+      </button>
     </div>
   );
 };

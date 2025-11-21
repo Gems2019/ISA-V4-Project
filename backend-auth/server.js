@@ -668,6 +668,56 @@ app.put('/use-token', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /delete-account:
+ *   delete:
+ *     summary: Delete user account
+ *     description: Deletes a user account from the database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Database error
+ */
+app.delete('/delete-account', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+
+  try {
+    const [result] = await clientPool.execute(
+      'DELETE FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error('Delete account error:', err);
+    return res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
 const PORT = process.env.PORT || 8000;
 
 // Initialize DB then start server

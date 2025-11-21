@@ -55,7 +55,11 @@
     "transcriptionsTitle": "Transcriptions:",
     "waitingForTranscriptions": "Waiting for transcriptions...",
     "errorWebSocketUrl": "WebSocket URL not provided",
-    "errorWebSocketConnection": "WebSocket connection error"
+    "errorWebSocketConnection": "WebSocket connection error",
+    "deleteAccountButton": "Delete Account",
+    "confirmDeleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
+    "errorDeleteAccount": "Failed to delete account. Please try again.",
+    "deletingAccount": "Deleting account..."
   },
   "teacher": {
     "welcomeTitle": "Welcome, Teacher!",
@@ -84,7 +88,11 @@
     "errorMicrophoneAccess": "Failed to access microphone. Please check permissions.",
     "errorSendAudio": "Failed to send audio chunk",
     "errorWebSocketUrl": "WebSocket URL not provided",
-    "errorWebSocketConnection": "WebSocket connection error"
+    "errorWebSocketConnection": "WebSocket connection error",
+    "deleteAccountButton": "Delete Account",
+    "confirmDeleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
+    "errorDeleteAccount": "Failed to delete account. Please try again.",
+    "deletingAccount": "Deleting account..."
   },
   "admin": {
     "dashboardTitle": "Admin Dashboard",
