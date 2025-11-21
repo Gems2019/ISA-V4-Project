@@ -1,7 +1,10 @@
+// require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
 const app = express();
 app.use(express.json());
@@ -22,6 +25,190 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
+
+// Swagger configuration
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Authentication API',
+      version: '1.0.0',
+      description: 'Authentication microservice with user registration, login, and user management capabilities',
+      contact: {
+        name: 'API Support',
+      },
+    },
+    servers: [
+      {
+        url: 'http://localhost:8000',
+        description: 'Development server',
+      },
+    ],
+    components: {
+      schemas: {
+        User: {
+          type: 'object',
+          properties: {
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'User email address',
+              example: 'john@example.com',
+            },
+            user_type: {
+              type: 'string',
+              enum: ['admin', 'teacher', 'student'],
+              description: 'Type of user account',
+              example: 'student',
+            },
+            api_token_uses: {
+              type: 'integer',
+              description: 'Number of API token uses remaining',
+              example: 20,
+            },
+          },
+        },
+        RegisterRequest: {
+          type: 'object',
+          required: ['email', 'password', 'user_type'],
+          properties: {
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'User email address',
+              example: 'newuser@example.com',
+            },
+            password: {
+              type: 'string',
+              format: 'password',
+              description: 'User password',
+              example: 'securePassword123',
+            },
+            user_type: {
+              type: 'string',
+              enum: ['admin', 'teacher', 'student'],
+              description: 'Type of user account to create',
+              example: 'student',
+            },
+          },
+        },
+        LoginRequest: {
+          type: 'object',
+          required: ['email', 'password'],
+          properties: {
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'User email address',
+              example: 'john@john.com',
+            },
+            password: {
+              type: 'string',
+              format: 'password',
+              description: 'User password',
+              example: '123',
+            },
+          },
+        },
+        SuccessResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              description: 'Indicates if the operation was successful',
+              example: true,
+            },
+            message: {
+              type: 'string',
+              description: 'Descriptive message about the operation result',
+              example: 'Operation completed successfully',
+            },
+          },
+        },
+        LoginResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              description: 'Indicates if login was successful',
+              example: true,
+            },
+            role: {
+              type: 'string',
+              enum: ['admin', 'teacher', 'student'],
+              description: 'User role/type',
+              example: 'student',
+            },
+            api_token: {
+              type: 'integer',
+              description: 'Number of API token uses remaining',
+              example: 20,
+            },
+          },
+        },
+        UsersResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              description: 'Indicates if the operation was successful',
+              example: true,
+            },
+            users: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/User',
+              },
+              description: 'List of all users in the system',
+            },
+          },
+        },
+        ErrorResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              description: 'Indicates operation failure',
+              example: false,
+            },
+            message: {
+              type: 'string',
+              description: 'Error message describing what went wrong',
+              example: 'An error occurred',
+            },
+          },
+        },
+        HealthResponse: {
+          type: 'object',
+          properties: {
+            status: {
+              type: 'string',
+              description: 'Overall health status',
+              example: 'healthy',
+            },
+            database: {
+              type: 'string',
+              description: 'Database connection status',
+              example: 'connected',
+            },
+            timestamp: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Timestamp of the health check',
+              example: '2025-11-17T12:00:00.000Z',
+            },
+          },
+        },
+      },
+    },
+  },
+  apis: ['./server.js'],
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+// Swagger documentation endpoint
+app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // MySQL connection configuration
 const adminDbConfig = {
@@ -118,6 +305,45 @@ async function initDb() {
   }
 }
 
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check endpoint
+ *     description: Checks the health status of the API server and database connection
+ *     tags:
+ *       - Health
+ *     responses:
+ *       200:
+ *         description: Service is healthy and database is connected
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthResponse'
+ *             example:
+ *               status: healthy
+ *               database: connected
+ *               timestamp: '2025-11-17T12:00:00.000Z'
+ *       503:
+ *         description: Service is unhealthy or database is disconnected
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: unhealthy
+ *                 database:
+ *                   type: string
+ *                   example: disconnected
+ *                 error:
+ *                   type: string
+ *                   example: Connection refused
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
@@ -137,6 +363,62 @@ app.get('/health', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Creates a new user account with email, password, and user type
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *           example:
+ *             email: newuser@example.com
+ *             password: securePassword123
+ *             user_type: student
+ *     responses:
+ *       200:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *             example:
+ *               success: true
+ *               message: Registration successful!
+ *       400:
+ *         description: Missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: Missing required fields.
+ *       409:
+ *         description: Email already registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: Email already registered.
+ *       500:
+ *         description: Database error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: Database error.
+ */
 // Register endpoint
 app.post('/register', async (req, res) => {
   const { email, password, user_type } = req.body;
@@ -160,6 +442,62 @@ app.post('/register', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticates a user with email and password, returns user role and API token usage
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *           example:
+ *             email: john@john.com
+ *             password: '123'
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *             example:
+ *               success: true
+ *               role: student
+ *               api_token: 20
+ *       400:
+ *         description: Missing email or password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: Missing email or password.
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: Invalid email or password.
+ *       500:
+ *         description: Database error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: Database error.
+ */
 // Login endpoint
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -187,6 +525,43 @@ app.post('/login', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /admin/all-users:
+ *   get:
+ *     summary: Get all users
+ *     description: Retrieves a list of all registered users in the system (admin endpoint)
+ *     tags:
+ *       - Admin
+ *     responses:
+ *       200:
+ *         description: List of all users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UsersResponse'
+ *             example:
+ *               success: true
+ *               users:
+ *                 - email: admin@admin.com
+ *                   user_type: admin
+ *                   api_token_uses: 20
+ *                 - email: teacher@teacher.com
+ *                   user_type: teacher
+ *                   api_token_uses: 20
+ *                 - email: john@john.com
+ *                   user_type: student
+ *                   api_token_uses: 20
+ *       500:
+ *         description: Database error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: Database error.
+ */
 // Get all users endpoint
 app.get('/admin/all-users', async (req, res) => {
   try {
@@ -194,6 +569,101 @@ app.get('/admin/all-users', async (req, res) => {
     res.json({ success: true, users });
   } catch (err) {
     console.error('Get all users error', err);
+    res.status(500).json({ success: false, message: 'Database error.' });
+  }
+});
+
+/**
+ * @swagger
+ * /use-token:
+ *   put:
+ *     summary: Decrement API token for a user
+ *     description: Decrements api_token_uses for the given user and returns the new count
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: john@john.com
+ *     responses:
+ *       200:
+ *         description: Token decremented successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 api_token_uses:
+ *                   type: integer
+ *       400:
+ *         description: Missing email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Database error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
+app.put('/use-token', async (req, res) => {
+  const { email } = req.body;
+  
+  // If the email cannot be found...
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Missing email.' });
+  }
+
+  try {
+    // Get current token count
+    const rows = await query('SELECT api_token_uses FROM users WHERE email = ?', [email]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    let currentTokens = rows[0].api_token_uses;
+
+    // if the tokens is less than or equal to 0, return the token count set to 0 and dont decrement further. 
+    if (currentTokens <= 0) {
+      return res.json({ success: true, api_token_uses: 0 });
+    }
+
+    // Decrement and update
+    const newTokens = currentTokens - 1;
+    await query('UPDATE users SET api_token_uses = ? WHERE email = ?', [newTokens, email]);
+    return res.json({ success: true, api_token_uses: newTokens });
+  } catch (err) {
+    console.error('Use token error', err);
     res.status(500).json({ success: false, message: 'Database error.' });
   }
 });

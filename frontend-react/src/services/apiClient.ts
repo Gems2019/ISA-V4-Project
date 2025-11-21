@@ -1,7 +1,8 @@
 import axios from 'axios';
+import Config from '../config';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: Config.AUTH_BASE_URL,
 });
 
 // Interceptor: Runs BEFORE each request is sent

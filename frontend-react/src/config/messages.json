@@ -1,4 +1,8 @@
 {
+  "home": {
+    "defaultTitle": "Title",
+    "defaultSubtitle": "Subtitle"
+  },
   "login": {
     "title": "Welcome Back",
     "subtitle": "Please sign-in to continue!",
@@ -22,11 +26,19 @@
     "errorPasswordMismatch": "Passwords do not match.",
     "errorPasswordLength": "Password must be at least 6 characters long.",
     "errorRegistrationFailed": "Failed to register. Email may already be in use.",
-    "successRegistration": "Registration successful! Redirecting to login..."
+    "successRegistration": "Registration successful! Redirecting to login...",
+    "userTypeStudent": "Student",
+    "userTypeTeacher": "Teacher"
   },
   "student": {
     "welcomeTitle": "Welcome, Student!",
     "apiUsageLabel": "API Calls Used:",
+    "apiTokenUsageTitle": "API Token Usage",
+    "initialApiTokens": "Initial API Tokens",
+    "tokensUsed": "Tokens Used",
+    "tokensRemaining": "Tokens Remaining",
+    "description": "Description",
+    "count": "Count",
     "comingSoon": "Student Dashboard - Coming Soon",
     "joinRoomButton": "Join Room",
     "logoutButton": "Logout",
@@ -48,6 +60,12 @@
   "teacher": {
     "welcomeTitle": "Welcome, Teacher!",
     "apiUsageLabel": "API Calls Used:",
+    "apiTokenUsageTitle": "API Token Usage",
+    "initialApiTokens": "Initial API Tokens",
+    "tokensUsed": "Tokens Used",
+    "tokensRemaining": "Tokens Remaining",
+    "description": "Description",
+    "count": "Count",
     "comingSoon": "Teacher Dashboard - Coming Soon",
     "createRoomButton": "Create Room",
     "logoutButton": "Logout",
@@ -74,6 +92,9 @@
     "tableHeaderEmail": "User Email",
     "tableHeaderCalls": "API Calls Made",
     "logoutButton": "Logout",
-    "errorFetchUsers": "Failed to fetch all user usage"
+    "errorFetchUsers": "Failed to fetch all user usage",
+    "teachersTitle": "Teachers",
+    "studentsTitle": "Students",
+    "tableHeaderTokensRemaining": "Tokens Remaining"
   }
 }

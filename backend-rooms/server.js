@@ -5,6 +5,8 @@ const WebSocket = require('ws');
 const http = require('http');
 const axios = require('axios');
 const FormData = require('form-data');
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
 class RoomServer {
   constructor() {
@@ -31,6 +33,9 @@ class RoomServer {
 
     // Configure middleware
     this.setupMiddleware();
+
+    // Setup Swagger documentation
+    this.setupSwagger();
 
     // Setup WebSocket handler
     this.setupWebSocket();
@@ -62,6 +67,98 @@ class RoomServer {
     this.app.use(cors(corsOptions));
   }
 
+  setupSwagger() {
+    const swaggerOptions = {
+      definition: {
+        openapi: '3.0.0',
+        info: {
+          title: 'Room Management API',
+          version: '1.0.0',
+          description: 'Room management microservice with WebSocket support for real-time communication and audio processing',
+          contact: {
+            name: 'API Support',
+          },
+        },
+        servers: [
+          {
+            url: 'http://localhost:3000',
+            description: 'Development server',
+          },
+        ],
+        components: {
+          schemas: {
+            CreateRoomResponse: {
+              type: 'object',
+              properties: {
+                room_code: {
+                  type: 'string',
+                  description: 'Unique room code for joining the room',
+                  example: 'A1B2C3',
+                },
+                ws_url: {
+                  type: 'string',
+                  description: 'WebSocket URL for connecting to the room',
+                  example: 'ws://localhost:3000?room=A1B2C3',
+                },
+              },
+            },
+            JoinRoomResponse: {
+              type: 'object',
+              properties: {
+                status: {
+                  type: 'string',
+                  description: 'Status of the join operation',
+                  example: 'success',
+                },
+                room_code: {
+                  type: 'string',
+                  description: 'The room code that was joined',
+                  example: 'A1B2C3',
+                },
+                ws_url: {
+                  type: 'string',
+                  description: 'WebSocket URL for connecting to the room',
+                  example: 'ws://localhost:3000?room=A1B2C3',
+                },
+              },
+            },
+            ErrorResponse: {
+              type: 'object',
+              properties: {
+                error: {
+                  type: 'string',
+                  description: 'Error message describing what went wrong',
+                  example: 'Room not found',
+                },
+              },
+            },
+            WebSocketMessage: {
+              type: 'object',
+              properties: {
+                type: {
+                  type: 'string',
+                  description: 'Type of WebSocket message',
+                  example: 'transcription',
+                },
+                text: {
+                  type: 'string',
+                  description: 'Transcribed text from audio',
+                  example: 'Hello, this is a test transcription.',
+                },
+              },
+            },
+          },
+        },
+      },
+      apis: ['./server.js'],
+    };
+
+    const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+    // Swagger documentation endpoint
+    this.app.use(`${this.ENDPOINT}/doc`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  }
+
   setupWebSocket() {
     // WebSocket connection handler
     this.wss.on('connection', (ws, req) => {
@@ -90,6 +187,25 @@ class RoomServer {
   }
 
   setupRoutes() {
+    /**
+     * @swagger
+     * /API/v1/create-room:
+     *   get:
+     *     summary: Create a new room
+     *     description: Creates a new room with a unique room code and returns the WebSocket URL for real-time communication
+     *     tags:
+     *       - Rooms
+     *     responses:
+     *       200:
+     *         description: Room created successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/CreateRoomResponse'
+     *             example:
+     *               room_code: A1B2C3
+     *               ws_url: ws://localhost:3000?room=A1B2C3
+     */
     // Create room endpoint
     this.app.get(`${this.ENDPOINT}/create-room`, (req, res) => {
       const roomCode = this.generateRoomCode();
@@ -109,6 +225,42 @@ class RoomServer {
       });
     });
 
+    /**
+     * @swagger
+     * /API/v1/join-room:
+     *   get:
+     *     summary: Join an existing room
+     *     description: Allows a user to join an existing room using a room code, returns the WebSocket URL for connecting
+     *     tags:
+     *       - Rooms
+     *     parameters:
+     *       - in: query
+     *         name: room
+     *         required: true
+     *         schema:
+     *           type: string
+     *           example: A1B2C3
+     *         description: The room code to join
+     *     responses:
+     *       200:
+     *         description: Successfully joined the room
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/JoinRoomResponse'
+     *             example:
+     *               status: success
+     *               room_code: A1B2C3
+     *               ws_url: ws://localhost:3000?room=A1B2C3
+     *       404:
+     *         description: Room not found
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *             example:
+     *               error: Room not found
+     */
     // Join room endpoint
     this.app.get(`${this.ENDPOINT}/join-room`, (req, res) => {
       const roomCode = req.query.room;
@@ -129,6 +281,70 @@ class RoomServer {
       });
     });
 
+    /**
+     * @swagger
+     * /API/v1/process-audio:
+     *   post:
+     *     summary: Process audio file and get transcription
+     *     description: Accepts an audio file, forwards it to the AI server for transcription, and broadcasts the result to all room participants via WebSocket
+     *     tags:
+     *       - Audio Processing
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         multipart/form-data:
+     *           schema:
+     *             type: object
+     *             required:
+     *               - room
+     *               - audio_file
+     *             properties:
+     *               room:
+     *                 type: string
+     *                 description: The room code where the transcription will be broadcast
+     *                 example: A1B2C3
+     *               audio_file:
+     *                 type: string
+     *                 format: binary
+     *                 description: Audio file to transcribe (max 512KB by default, 5-second clips recommended)
+     *           example:
+     *             room: A1B2C3
+     *     responses:
+     *       200:
+     *         description: Audio processed successfully, transcription broadcast to room
+     *       400:
+     *         description: No audio file provided
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *             example:
+     *               error: No audio file provided
+     *       404:
+     *         description: Room not found
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *             example:
+     *               error: Room not found
+     *       413:
+     *         description: Audio file too large
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *             example:
+     *               error: Audio file too large
+     *       500:
+     *         description: Failed to process audio
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *             example:
+     *               error: Failed to process audio
+     */
     // Process audio endpoint
     this.app.post(`${this.ENDPOINT}/process-audio`, this.upload.single('audio_file'), async (req, res) => {
       const { room } = req.body;
