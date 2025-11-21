@@ -1,1 +1,3 @@
 .vscode
+# Ignore GitHub Workflows (to avoid permission issues)
+.github/workflows/
