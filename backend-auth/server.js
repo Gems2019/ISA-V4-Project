@@ -290,17 +290,6 @@ async function initDb() {
 
   await adminQuery(createTableSql);
 
-  const createRequestStatsTableSql = `
-  CREATE TABLE IF NOT EXISTS request_stats (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      method VARCHAR(10) NOT NULL,
-      endpoint VARCHAR(255) NOT NULL,
-      request_count INT DEFAULT 1,
-      UNIQUE KEY unique_method_endpoint (method, endpoint)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
-
-  await adminQuery(createRequestStatsTableSql);
-
   const seeds = [
     { email: 'admin@admin.com', password: '111', user_type: 'admin' },
     { email: 'teacher@teacher.com', password: '123', user_type: 'teacher' },
@@ -313,6 +302,27 @@ async function initDb() {
       const hash = await bcrypt.hash(u.password, 12);
       await adminQuery('INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)', [u.email, hash, u.user_type]);
     }
+  }
+  
+  // Initialize request stats table
+  await initRequestStatsTable();
+}
+
+// Initialize request stats table using admin pool
+async function initRequestStatsTable() {
+  try {
+    await adminQuery(`
+      CREATE TABLE IF NOT EXISTS request_stats (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        method VARCHAR(10) NOT NULL,
+        endpoint VARCHAR(255) NOT NULL,
+        request_count INT DEFAULT 1,
+        UNIQUE KEY unique_method_endpoint (method, endpoint)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ Request stats table initialized');
+  } catch (error) {
+    console.error('Error creating request stats table:', error);
   }
 }
 
@@ -356,7 +366,7 @@ async function initDb() {
  *                   format: date-time
  */
 
-// Middleware to track API requests
+// Middleware to track API requests (uses client pool - safe because no user input)
 app.use(async (req, res, next) => {
   const method = req.method;
   const endpoint = req.path;
@@ -364,7 +374,7 @@ app.use(async (req, res, next) => {
   // Track in database asynchronously (don't block request)
   setImmediate(async () => {
     try {
-      await adminQuery(
+      await query(
         `INSERT INTO request_stats (method, endpoint, request_count)
          VALUES (?, ?, 1)
          ON DUPLICATE KEY UPDATE request_count = request_count + 1`,
