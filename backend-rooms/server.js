@@ -1,3 +1,5 @@
+// GitHub Copilot used to assist in bugfixing
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
