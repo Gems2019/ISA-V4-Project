@@ -310,20 +310,17 @@ async function initDb() {
 
 // Initialize request stats table using admin pool
 async function initRequestStatsTable() {
-  try {
-    await adminQuery(`
-      CREATE TABLE IF NOT EXISTS request_stats (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        method VARCHAR(10) NOT NULL,
-        endpoint VARCHAR(255) NOT NULL,
-        request_count INT DEFAULT 1,
-        UNIQUE KEY unique_method_endpoint (method, endpoint)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✅ Request stats table initialized');
-  } catch (error) {
-    console.error('Error creating request stats table:', error);
-  }
+  console.log('Creating request_stats table...');
+  await adminQuery(`
+    CREATE TABLE IF NOT EXISTS request_stats (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      method VARCHAR(10) NOT NULL,
+      endpoint VARCHAR(255) NOT NULL,
+      request_count INT DEFAULT 1,
+      UNIQUE KEY unique_method_endpoint (method, endpoint)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  console.log('✅ Request stats table created');
 }
 
 /**
@@ -366,7 +363,7 @@ async function initRequestStatsTable() {
  *                   format: date-time
  */
 
-// Middleware to track API requests (uses client pool - safe because no user input)
+// Middleware to track API requests (uses admin pool - safe because no user input)
 app.use(async (req, res, next) => {
   const method = req.method;
   const endpoint = req.path;
@@ -374,7 +371,7 @@ app.use(async (req, res, next) => {
   // Track in database asynchronously (don't block request)
   setImmediate(async () => {
     try {
-      await query(
+      await adminQuery(
         `INSERT INTO request_stats (method, endpoint, request_count)
          VALUES (?, ?, 1)
          ON DUPLICATE KEY UPDATE request_count = request_count + 1`,
@@ -672,7 +669,7 @@ app.get('/admin/all-users', async (req, res) => {
 // Get server statistics endpoint
 app.get('/admin/server-stats', async (req, res) => {
   try {
-    const stats = await query('SELECT method, endpoint, request_count FROM request_stats ORDER BY request_count DESC', []);
+    const stats = await adminQuery('SELECT method, endpoint, request_count FROM request_stats ORDER BY request_count DESC', []);
     res.json({ success: true, stats });
   } catch (err) {
     console.error('Get server stats error', err);
