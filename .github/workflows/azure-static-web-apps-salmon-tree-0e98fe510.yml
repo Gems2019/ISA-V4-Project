@@ -33,6 +33,7 @@ jobs:
           output_location: "dist" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
         env:
+          VITE_API_URL: "https://isa-v4-project-authentication-production.up.railway.app"
           VITE_AUTH_BASE_URL: "https://isa-v4-project-authentication-production.up.railway.app"
           VITE_ROOMS_BASE_URL: "https://isa-v4-project-production.up.railway.app/API/v1"
 
