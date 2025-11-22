@@ -290,6 +290,17 @@ async function initDb() {
 
   await adminQuery(createTableSql);
 
+  const createRequestStatsTableSql = `
+  CREATE TABLE IF NOT EXISTS request_stats (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      method VARCHAR(10) NOT NULL,
+      endpoint VARCHAR(255) NOT NULL,
+      request_count INT DEFAULT 1,
+      UNIQUE KEY unique_method_endpoint (method, endpoint)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
+  await adminQuery(createRequestStatsTableSql);
+
   const seeds = [
     { email: 'admin@admin.com', password: '111', user_type: 'admin' },
     { email: 'teacher@teacher.com', password: '123', user_type: 'teacher' },
@@ -344,6 +355,29 @@ async function initDb() {
  *                   type: string
  *                   format: date-time
  */
+
+// Middleware to track API requests
+app.use(async (req, res, next) => {
+  const method = req.method;
+  const endpoint = req.path;
+  
+  // Track in database asynchronously (don't block request)
+  setImmediate(async () => {
+    try {
+      await adminQuery(
+        `INSERT INTO request_stats (method, endpoint, request_count)
+         VALUES (?, ?, 1)
+         ON DUPLICATE KEY UPDATE request_count = request_count + 1`,
+        [method, endpoint]
+      );
+    } catch (err) {
+      console.error('Error tracking request stats:', err);
+    }
+  });
+  
+  next();
+});
+
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
@@ -569,6 +603,69 @@ app.get('/admin/all-users', async (req, res) => {
     res.json({ success: true, users });
   } catch (err) {
     console.error('Get all users error', err);
+    res.status(500).json({ success: false, message: 'Database error.' });
+  }
+});
+
+/**
+ * @swagger
+ * /admin/server-stats:
+ *   get:
+ *     summary: Get server API usage statistics
+ *     description: Returns statistics showing request counts for each API endpoint grouped by HTTP method
+ *     tags:
+ *       - Admin
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved server statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 stats:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       method:
+ *                         type: string
+ *                         example: GET
+ *                       endpoint:
+ *                         type: string
+ *                         example: /health
+ *                       request_count:
+ *                         type: integer
+ *                         example: 42
+ *             example:
+ *               success: true
+ *               stats:
+ *                 - method: GET
+ *                   endpoint: /health
+ *                   request_count: 42
+ *                 - method: POST
+ *                   endpoint: /login
+ *                   request_count: 15
+ *       500:
+ *         description: Database error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: Database error.
+ */
+// Get server statistics endpoint
+app.get('/admin/server-stats', async (req, res) => {
+  try {
+    const stats = await query('SELECT method, endpoint, request_count FROM request_stats ORDER BY request_count DESC', []);
+    res.json({ success: true, stats });
+  } catch (err) {
+    console.error('Get server stats error', err);
     res.status(500).json({ success: false, message: 'Database error.' });
   }
 });

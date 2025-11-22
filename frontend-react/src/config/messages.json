@@ -103,6 +103,11 @@
     "errorFetchUsers": "Failed to fetch all user usage",
     "teachersTitle": "Teachers",
     "studentsTitle": "Students",
-    "tableHeaderTokensRemaining": "Tokens Remaining"
+    "tableHeaderTokensRemaining": "Tokens Remaining",
+    "serverStatsTitle": "Server Statistics",
+    "tableHeaderMethod": "Method",
+    "tableHeaderEndpoint": "Endpoint",
+    "tableHeaderRequests": "Requests",
+    "errorFetchStats": "Failed to fetch server statistics"
   }
 }

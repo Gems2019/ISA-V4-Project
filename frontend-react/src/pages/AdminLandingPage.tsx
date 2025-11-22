@@ -9,9 +9,16 @@ interface User {
   api_token_uses: number;
 }
 
+interface ServerStat {
+  method: string;
+  endpoint: string;
+  request_count: number;
+}
+
 const AdminLandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
+  const [stats, setStats] = useState<ServerStat[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -32,7 +39,20 @@ const AdminLandingPage: React.FC = () => {
       }
     };
 
+    // Fetch server statistics from backend
+    const fetchStats = async () => {
+      try {
+        const response = await apiClient.get('/admin/server-stats');
+        if (response.data.success) {
+          setStats(response.data.stats);
+        }
+      } catch (err) {
+        console.error('Error fetching stats:', err);
+      }
+    };
+
     fetchUsers();
+    fetchStats();
   }, [navigate]);
 
   const handleLogout = () => {
@@ -81,6 +101,26 @@ const AdminLandingPage: React.FC = () => {
             <tr key={student.email}>
               <td>{student.email}</td>
               <td>{student.api_token_uses}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2>{messages.admin.serverStatsTitle}</h2>
+      <table border={1}>
+        <thead>
+          <tr>
+            <th>{messages.admin.tableHeaderMethod}</th>
+            <th>{messages.admin.tableHeaderEndpoint}</th>
+            <th>{messages.admin.tableHeaderRequests}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stats.map((stat, index) => (
+            <tr key={index}>
+              <td>{stat.method}</td>
+              <td>{stat.endpoint}</td>
+              <td>{stat.request_count}</td>
             </tr>
           ))}
         </tbody>
